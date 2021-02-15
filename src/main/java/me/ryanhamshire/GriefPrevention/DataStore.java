@@ -932,6 +932,7 @@ public abstract class DataStore
                 new ArrayList<>(),
                 new ArrayList<>(),
                 new ArrayList<>(),
+                new ArrayList<>(),
                 id);
 
         newClaim.parent = parent;
@@ -1582,6 +1583,7 @@ public abstract class DataStore
         this.addDefault(defaults, Messages.ManageUniversalPermissionsInstruction, "To manage permissions for ALL your claims, stand outside them.", null);
         this.addDefault(defaults, Messages.ManageOneClaimPermissionsInstruction, "To manage permissions for a specific claim, stand inside it.", null);
         this.addDefault(defaults, Messages.CollectivePublic, "the public", "as in 'granted the public permission to...'");
+        this.addDefault(defaults, Messages.EntryPermission, "walk", null);
         this.addDefault(defaults, Messages.BuildPermission, "build", null);
         this.addDefault(defaults, Messages.ContainersPermission, "access containers and animals", null);
         this.addDefault(defaults, Messages.AccessPermission, "use buttons and levers", null);

@@ -1446,10 +1446,11 @@ public class GriefPrevention extends JavaPlugin
             //otherwise build a list of explicit permissions by permission level
             //and send that to the player
             ArrayList<String> builders = new ArrayList<>();
+            ArrayList<String> entries = new ArrayList<>();
             ArrayList<String> containers = new ArrayList<>();
             ArrayList<String> accessors = new ArrayList<>();
             ArrayList<String> managers = new ArrayList<>();
-            claim.getPermissions(builders, containers, accessors, managers);
+            claim.getPermissions(builders, entries, containers, accessors, managers);
 
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.TrustListHeader);
 
@@ -1709,6 +1710,16 @@ public class GriefPrevention extends JavaPlugin
             if (args.length != 1) return false;
 
             this.handleTrustCommand(player, ClaimPermission.Inventory, args[0]);
+
+            return true;
+        }
+
+        //entrytrust <player>
+        else if(cmd.getName().equalsIgnoreCase("entrytrust") && player != null)
+        {
+            if(args.length != 1) return false;
+
+            this.handleTrustCommand(player, ClaimPermission.Entry, args[0]);
 
             return true;
         }
@@ -3068,6 +3079,9 @@ public class GriefPrevention extends JavaPlugin
         if (permissionLevel == null)
         {
             permissionDescription = this.dataStore.getMessage(Messages.PermissionsPermission);
+        }
+        else if(permissionLevel == ClaimPermission.Entry){
+            permissionDescription = this.dataStore.getMessage(Messages.EntryPermission);
         }
         else if (permissionLevel == ClaimPermission.Build)
         {

@@ -24,6 +24,11 @@ commands:
       usage: /Trust <player>  Grants a player permission to build.  See also /UnTrust, /ContainerTrust, /AccessTrust, and /PermissionTrust.
       aliases: tr
       permission: griefprevention.claims
+    entrytrust:
+      description: Grants a player permisison to enter your claim(s).
+      usage: /Entrytrust <player>.  Grants a player permisison to enter your claim(s)
+      aliases: et
+      permission: griefprevention.claims
     untrust:
       description: Revokes a player's access to your claim(s).
       usage: /UnTrust <player>
