@@ -23,6 +23,10 @@ import me.ryanhamshire.GriefPrevention.events.PreventBlockBreakEvent;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
 import me.ryanhamshire.GriefPrevention.metrics.MetricsHandler;
+import me.ryanhamshire.GriefPrevention.util.InClaimCalculator;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.context.ContextCalculator;
+import net.luckperms.api.context.ContextManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.BanList;
 import org.bukkit.BanList.Type;
@@ -71,6 +75,8 @@ import java.util.stream.Collectors;
 
 public class GriefPrevention extends JavaPlugin
 {
+    private ContextManager contextManager;
+    private final List<ContextCalculator<Player>> registeredCalculators = new ArrayList<>();
     //for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
 
@@ -376,6 +382,17 @@ public class GriefPrevention extends JavaPlugin
         {
             new IgnoreLoaderThread(player.getUniqueId(), this.dataStore.getPlayerData(player.getUniqueId()).ignoredPlayers).start();
         }
+
+        LuckPerms luckPerms = getServer().getServicesManager().load(LuckPerms.class);
+        if (luckPerms == null) {
+            throw new IllegalStateException("LuckPerms API not loaded.");
+        }
+
+        contextManager = luckPerms.getContextManager();
+
+        ContextCalculator<Player> calculator = new InClaimCalculator(dataStore);
+        contextManager.registerCalculator(calculator);
+        this.registeredCalculators.add(calculator);
 
         AddLogEntry("Boot finished.");
 
@@ -3247,6 +3264,9 @@ public class GriefPrevention extends JavaPlugin
             PlayerData playerData = this.dataStore.getPlayerData(playerID);
             this.dataStore.savePlayerDataSync(playerID, playerData);
         }
+
+        this.registeredCalculators.forEach(c -> this.contextManager.unregisterCalculator(c));
+        this.registeredCalculators.clear();
 
         this.dataStore.close();
 
