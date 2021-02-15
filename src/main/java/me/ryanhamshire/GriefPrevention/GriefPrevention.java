@@ -1452,54 +1452,67 @@ public class GriefPrevention extends JavaPlugin
             ArrayList<String> managers = new ArrayList<>();
             claim.getPermissions(builders, entries, containers, accessors, managers);
 
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.TrustListHeader);
+            player.sendMessage(" ");
+            player.sendMessage(ChatColor.YELLOW + "This claimed owned by "+ ChatColor.GOLD + ChatColor.BOLD + claim.getOwnerName());
+            player.sendMessage(ChatColor.YELLOW + "The following players are trusted:");
+            player.sendMessage(" ");
+
+            // Showing managers of the claim
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Managers:");
 
             StringBuilder permissions = new StringBuilder();
-            permissions.append(ChatColor.GOLD).append('>');
-
-            if (managers.size() > 0)
-            {
-                for (String manager : managers)
-                    permissions.append(this.trustEntryToPlayerName(manager)).append(' ');
-            }
+            for (String manager : managers)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(manager)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.YELLOW).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Builders:");
 
-            if (builders.size() > 0)
-            {
-                for (String builder : builders)
-                    permissions.append(this.trustEntryToPlayerName(builder)).append(' ');
-            }
+            for (String builder : builders)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(builder)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.GREEN).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Container:");
 
-            if (containers.size() > 0)
-            {
-                for (String container : containers)
-                    permissions.append(this.trustEntryToPlayerName(container)).append(' ');
-            }
+            for (String container : containers)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(container)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.BLUE).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Accessors");
 
-            if (accessors.size() > 0)
-            {
-                for (String accessor : accessors)
-                    permissions.append(this.trustEntryToPlayerName(accessor)).append(' ');
-            }
+            for (String accessor : accessors)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(accessor)).append(" ");
+
 
             player.sendMessage(permissions.toString());
 
-            player.sendMessage(
-                    ChatColor.GOLD + this.dataStore.getMessage(Messages.Manage) + " " +
-                            ChatColor.YELLOW + this.dataStore.getMessage(Messages.Build) + " " +
-                            ChatColor.GREEN + this.dataStore.getMessage(Messages.Containers) + " " +
-                            ChatColor.BLUE + this.dataStore.getMessage(Messages.Access));
+            // Showing Entry trusted of the claim
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Entry");
+
+            // Checks if the entries are filled. if not It will tell the player its open to public and to prevent that the player has her/his self to the entrytrust
+            if(entries.size() >= 1){
+                permissions = new StringBuilder();
+                for (String entry : entries)
+                    permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(entry)).append(" ");
+                player.sendMessage(permissions.toString());
+            } else{
+                StringBuilder entryTrustMessage = new StringBuilder();
+                entryTrustMessage.append(ChatColor.GOLD).append("Everyone can enter this claim. ");
+                if(claim.getOwnerName().equalsIgnoreCase(player.getName())){
+                    entryTrustMessage.append("Want to prevent that?");
+                }
+                player.sendMessage(entryTrustMessage.toString());
+
+                if(claim.getOwnerName().equalsIgnoreCase(player.getName()))
+                {
+                    player.sendMessage(ChatColor.GOLD + "Entry trust yourself!");
+                }
+            }
 
             if (claim.getSubclaimRestrictions())
             {
