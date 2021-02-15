@@ -2687,7 +2687,7 @@ class PlayerEventHandler implements Listener
         Player player = moveEvent.getPlayer();
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
-        Claim claim = this.dataStore.getClaimAt(location, true, playerData.lastClaim);
+        Claim claim = this.dataStore.getClaimAt(location, false, playerData.lastClaim);
         if (claim != null) {
 
             if (!claim.getOwnerName().equals(playerOwnerName.get(player.getUniqueId().toString()))) {
@@ -2699,16 +2699,31 @@ class PlayerEventHandler implements Listener
             if (playerHasEntryTrust(player, claim)) {
                 playerClaimBorderAction(player, claim, "entering");
             } else {
-                Vector differenceVector = getVectorBetweenLocations(location, playersLastLocation.get(player.getUniqueId().toString())).multiply(0.25);
+                Location teleportLocation = playersLastLocation.get(player.getUniqueId().toString());
 
-                player.setFallDistance(0f);
-                player.setVelocity(differenceVector);
+                for(int i =  (int)teleportLocation.getY(); i > 0; i--){
+                    Location temporaryLocation = teleportLocation;
+                    temporaryLocation.setY(i);
 
+                    if(temporaryLocation.getWorld() != null){
+                        if(!temporaryLocation.getWorld().getBlockAt(temporaryLocation).getType().isAir()){
+                            teleportLocation.setY(temporaryLocation.getY() + 1);
+                            break;
+                        }
+                    } else{
+                        player.sendMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "AN ERROR OCCURED!");
+                        break;
+                    }
+                }
+
+                playerFalling.put(player.getUniqueId().toString(), "true");
+                player.teleport(teleportLocation);
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
             }
 
         } else {
             playerClaimBorderAction(player, null, "leaving");
+
             playersLastLocation.put(player.getUniqueId().toString(), location);
         }
     }
@@ -2824,8 +2839,5 @@ class PlayerEventHandler implements Listener
         }
     }
 
-    public static Vector getVectorBetweenLocations(Location currentLocation, Location targetLocation) {
-        return targetLocation.toVector().subtract(currentLocation.toVector()).normalize();
-    }
     //endregion
 }
