@@ -30,6 +30,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Sound;
 import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
@@ -93,7 +94,6 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.BlockIterator;
-import org.bukkit.util.Vector;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -2718,6 +2718,7 @@ class PlayerEventHandler implements Listener
 
                 playerFalling.put(player.getUniqueId().toString(), "true");
                 player.teleport(teleportLocation);
+                player.playSound(teleportLocation, Sound.ENTITY_IRON_GOLEM_STEP, 1, 1);
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
             }
 
