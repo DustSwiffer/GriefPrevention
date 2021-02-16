@@ -146,10 +146,15 @@ class PlayerEventHandler implements Listener
     synchronized void onPlayerChat(AsyncPlayerChatEvent event)
     {
         Player player = event.getPlayer();
+
         if (!player.isOnline())
         {
             event.setCancelled(true);
             return;
+        }
+        if(!player.hasPermission("griefprevention.unmute")){
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "You can't speak right now. please accept the rules first.");
         }
 
         String message = event.getMessage();
