@@ -2704,7 +2704,7 @@ class PlayerEventHandler implements Listener
                 for(int i =  (int)teleportLocation.getY(); i > 0; i--){
                     Location temporaryLocation = teleportLocation;
                     temporaryLocation.setY(i);
-
+                    
                     if(temporaryLocation.getWorld() != null){
                         if(!temporaryLocation.getWorld().getBlockAt(temporaryLocation).getType().isAir()){
                             teleportLocation.setY(temporaryLocation.getY() + 1);
@@ -2716,7 +2716,6 @@ class PlayerEventHandler implements Listener
                     }
                 }
 
-                playerFalling.put(player.getUniqueId().toString(), "true");
                 player.teleport(teleportLocation);
                 player.playSound(teleportLocation, Sound.ENTITY_IRON_GOLEM_STEP, 1, 1);
                 player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
