@@ -55,6 +55,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -868,8 +869,9 @@ public abstract class DataStore
 
         int smallx, bigx, smally, bigy, smallz, bigz;
 
-        if (y1 < GriefPrevention.instance.config_claims_maxDepth) y1 = GriefPrevention.instance.config_claims_maxDepth;
-        if (y2 < GriefPrevention.instance.config_claims_maxDepth) y2 = GriefPrevention.instance.config_claims_maxDepth;
+        int worldMinY = world.getMinHeight();
+        y1 = Math.max(worldMinY, Math.max(GriefPrevention.instance.config_claims_maxDepth, y1));
+        y2 = Math.max(worldMinY, Math.max(GriefPrevention.instance.config_claims_maxDepth, y2));
 
         //determine small versus big inputs
         if (x1 < x2)
@@ -920,7 +922,7 @@ public abstract class DataStore
         //creative mode claims always go to bedrock
         if (GriefPrevention.instance.config_claims_worldModes.get(world) == ClaimsMode.Creative)
         {
-            smally = 0;
+            smally = world.getMinHeight();
         }
 
         //create a new claim instance (but don't save it, yet)
@@ -1058,8 +1060,11 @@ public abstract class DataStore
     //respects the max depth config variable
     synchronized public void extendClaim(Claim claim, int newDepth)
     {
-        if (newDepth < GriefPrevention.instance.config_claims_maxDepth)
-            newDepth = GriefPrevention.instance.config_claims_maxDepth;
+        newDepth = Math.max(
+                Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld()).getMinHeight(),
+                Math.max(
+                        newDepth,
+                        GriefPrevention.instance.config_claims_maxDepth));
 
         if (claim.parent != null) claim = claim.parent;
 
@@ -1286,7 +1291,12 @@ public abstract class DataStore
         if (claim.isAdminClaim()) return;
 
         //player must have some level of permission to be sieged in a claim
-        if (claim.allowAccess(player) != null) return;
+        Claim currentClaim = claim;
+        while (!currentClaim.hasExplicitPermission(player, ClaimPermission.Access))
+        {
+            if (currentClaim.parent == null) return;
+            currentClaim = currentClaim.parent;
+        }
 
         //otherwise extend the siege
         playerData.siegeData.claims.add(claim);
@@ -1754,7 +1764,7 @@ public abstract class DataStore
         this.addDefault(defaults, Messages.SubclaimUnrestricted, "This subclaim's permissions will now inherit from the parent claim", null);
 
         this.addDefault(defaults, Messages.NetherPortalTrapDetectionMessage, "It seems you might be stuck inside a nether portal. We will rescue you in a few seconds if that is the case!", "Sent to player on join, if they left while inside a nether portal.");
-
+        this.addDefault(defaults, Messages.NoEntryPermission, "", null);
         //load the config file
         FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));
 
