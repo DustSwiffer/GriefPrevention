@@ -23,6 +23,10 @@ import me.ryanhamshire.GriefPrevention.events.PreventBlockBreakEvent;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
 import me.ryanhamshire.GriefPrevention.metrics.MetricsHandler;
+import me.ryanhamshire.GriefPrevention.util.InClaimCalculator;
+import net.luckperms.api.LuckPerms;
+import net.luckperms.api.context.ContextCalculator;
+import net.luckperms.api.context.ContextManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.BanList;
 import org.bukkit.BanList.Type;
@@ -73,6 +77,8 @@ import java.util.stream.Collectors;
 
 public class GriefPrevention extends JavaPlugin
 {
+    private ContextManager contextManager;
+    private final List<ContextCalculator<Player>> registeredCalculators = new ArrayList<>();
     //for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
 
@@ -383,6 +389,17 @@ public class GriefPrevention extends JavaPlugin
         {
             new IgnoreLoaderThread(player.getUniqueId(), this.dataStore.getPlayerData(player.getUniqueId()).ignoredPlayers).start();
         }
+
+        LuckPerms luckPerms = getServer().getServicesManager().load(LuckPerms.class);
+        if (luckPerms == null) {
+            throw new IllegalStateException("LuckPerms API not loaded.");
+        }
+
+        contextManager = luckPerms.getContextManager();
+
+        ContextCalculator<Player> calculator = new InClaimCalculator(dataStore);
+        contextManager.registerCalculator(calculator);
+        this.registeredCalculators.add(calculator);
 
         AddLogEntry("Boot finished.");
 
@@ -1455,59 +1472,73 @@ public class GriefPrevention extends JavaPlugin
             //otherwise build a list of explicit permissions by permission level
             //and send that to the player
             ArrayList<String> builders = new ArrayList<>();
+            ArrayList<String> entries = new ArrayList<>();
             ArrayList<String> containers = new ArrayList<>();
             ArrayList<String> accessors = new ArrayList<>();
             ArrayList<String> managers = new ArrayList<>();
-            claim.getPermissions(builders, containers, accessors, managers);
+            claim.getPermissions(builders, entries, containers, accessors, managers);
 
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.TrustListHeader);
+            player.sendMessage(" ");
+            player.sendMessage(ChatColor.YELLOW + "This claimed owned by "+ ChatColor.GOLD + ChatColor.BOLD + claim.getOwnerName());
+            player.sendMessage(ChatColor.YELLOW + "The following players are trusted:");
+            player.sendMessage(" ");
+
+            // Showing managers of the claim
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Managers:");
 
             StringBuilder permissions = new StringBuilder();
-            permissions.append(ChatColor.GOLD).append('>');
-
-            if (managers.size() > 0)
-            {
-                for (String manager : managers)
-                    permissions.append(this.trustEntryToPlayerName(manager)).append(' ');
-            }
+            for (String manager : managers)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(manager)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.YELLOW).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Builders:");
 
-            if (builders.size() > 0)
-            {
-                for (String builder : builders)
-                    permissions.append(this.trustEntryToPlayerName(builder)).append(' ');
-            }
+            for (String builder : builders)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(builder)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.GREEN).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Container:");
 
-            if (containers.size() > 0)
-            {
-                for (String container : containers)
-                    permissions.append(this.trustEntryToPlayerName(container)).append(' ');
-            }
+            for (String container : containers)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(container)).append(" ");
 
             player.sendMessage(permissions.toString());
+
             permissions = new StringBuilder();
-            permissions.append(ChatColor.BLUE).append('>');
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Accessors");
 
-            if (accessors.size() > 0)
-            {
-                for (String accessor : accessors)
-                    permissions.append(this.trustEntryToPlayerName(accessor)).append(' ');
-            }
+            for (String accessor : accessors)
+                permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(accessor)).append(" ");
+
 
             player.sendMessage(permissions.toString());
 
-            player.sendMessage(
-                    ChatColor.GOLD + this.dataStore.getMessage(Messages.Manage) + " " +
-                            ChatColor.YELLOW + this.dataStore.getMessage(Messages.Build) + " " +
-                            ChatColor.GREEN + this.dataStore.getMessage(Messages.Containers) + " " +
-                            ChatColor.BLUE + this.dataStore.getMessage(Messages.Access));
+            // Showing Entry trusted of the claim
+            player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD.toString() + "Entry");
+
+            // Checks if the entries are filled. if not It will tell the player its open to public and to prevent that the player has her/his self to the entrytrust
+            if(entries.size() >= 1){
+                permissions = new StringBuilder();
+                for (String entry : entries)
+                    permissions.append(ChatColor.GOLD).append(this.trustEntryToPlayerName(entry)).append(" ");
+                player.sendMessage(permissions.toString());
+            } else{
+                StringBuilder entryTrustMessage = new StringBuilder();
+                entryTrustMessage.append(ChatColor.GOLD).append("Everyone can enter this claim. ");
+                if(claim.getOwnerName().equalsIgnoreCase(player.getName())){
+                    entryTrustMessage.append("Want to prevent that?");
+                }
+                player.sendMessage(entryTrustMessage.toString());
+
+                if(claim.getOwnerName().equalsIgnoreCase(player.getName()))
+                {
+                    player.sendMessage(ChatColor.GOLD + "Entry trust yourself!");
+                }
+            }
 
             if (claim.getSubclaimRestrictions())
             {
@@ -1718,6 +1749,16 @@ public class GriefPrevention extends JavaPlugin
             if (args.length != 1) return false;
 
             this.handleTrustCommand(player, ClaimPermission.Inventory, args[0]);
+
+            return true;
+        }
+
+        //entrytrust <player>
+        else if(cmd.getName().equalsIgnoreCase("entrytrust") && player != null)
+        {
+            if(args.length != 1) return false;
+
+            this.handleTrustCommand(player, ClaimPermission.Entry, args[0]);
 
             return true;
         }
@@ -3068,6 +3109,9 @@ public class GriefPrevention extends JavaPlugin
         {
             permissionDescription = this.dataStore.getMessage(Messages.PermissionsPermission);
         }
+        else if(permissionLevel == ClaimPermission.Entry){
+            permissionDescription = this.dataStore.getMessage(Messages.EntryPermission);
+        }
         else if (permissionLevel == ClaimPermission.Build)
         {
             permissionDescription = this.dataStore.getMessage(Messages.BuildPermission);
@@ -3219,6 +3263,9 @@ public class GriefPrevention extends JavaPlugin
             PlayerData playerData = this.dataStore.getPlayerData(playerID);
             this.dataStore.savePlayerDataSync(playerID, playerData);
         }
+
+        this.registeredCalculators.forEach(c -> this.contextManager.unregisterCalculator(c));
+        this.registeredCalculators.clear();
 
         this.dataStore.close();
 

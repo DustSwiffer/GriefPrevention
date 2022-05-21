@@ -87,6 +87,7 @@ public enum Messages
     ManageOneClaimPermissionsInstruction,
     CollectivePublic,
     BuildPermission,
+    EntryPermission,
     ContainersPermission,
     AccessPermission,
     PermissionsPermission,
@@ -254,5 +255,6 @@ public enum Messages
     StandInSubclaim,
     SubclaimRestricted,
     SubclaimUnrestricted,
-    NetherPortalTrapDetectionMessage
+    NetherPortalTrapDetectionMessage,
+    NoEntryPermission
 }

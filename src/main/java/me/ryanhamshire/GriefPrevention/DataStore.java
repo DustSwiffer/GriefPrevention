@@ -934,6 +934,7 @@ public abstract class DataStore
                 new ArrayList<>(),
                 new ArrayList<>(),
                 new ArrayList<>(),
+                new ArrayList<>(),
                 id);
 
         newClaim.parent = parent;
@@ -1592,6 +1593,7 @@ public abstract class DataStore
         this.addDefault(defaults, Messages.ManageUniversalPermissionsInstruction, "To manage permissions for ALL your claims, stand outside them.", null);
         this.addDefault(defaults, Messages.ManageOneClaimPermissionsInstruction, "To manage permissions for a specific claim, stand inside it.", null);
         this.addDefault(defaults, Messages.CollectivePublic, "the public", "as in 'granted the public permission to...'");
+        this.addDefault(defaults, Messages.EntryPermission, "walk", null);
         this.addDefault(defaults, Messages.BuildPermission, "build", null);
         this.addDefault(defaults, Messages.ContainersPermission, "access containers and animals", null);
         this.addDefault(defaults, Messages.AccessPermission, "use buttons and levers", null);
@@ -1762,7 +1764,7 @@ public abstract class DataStore
         this.addDefault(defaults, Messages.SubclaimUnrestricted, "This subclaim's permissions will now inherit from the parent claim", null);
 
         this.addDefault(defaults, Messages.NetherPortalTrapDetectionMessage, "It seems you might be stuck inside a nether portal. We will rescue you in a few seconds if that is the case!", "Sent to player on join, if they left while inside a nether portal.");
-
+        this.addDefault(defaults, Messages.NoEntryPermission, "", null);
         //load the config file
         FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));
 

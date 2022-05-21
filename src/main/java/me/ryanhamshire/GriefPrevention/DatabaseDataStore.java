@@ -335,6 +335,10 @@ public class DatabaseDataStore extends DataStore
                 List<String> builderNames = Arrays.asList(buildersString.split(";"));
                 builderNames = this.convertNameListToUUIDList(builderNames);
 
+                String entriesString = results.getString("entry");
+                List<String> entryNames = Arrays.asList(entriesString.split(";"));
+                entryNames = this.convertNameListToUUIDList(entryNames);
+
                 String containersString = results.getString("containers");
                 List<String> containerNames = Arrays.asList(containersString.split(";"));
                 containerNames = this.convertNameListToUUIDList(containerNames);
@@ -346,7 +350,7 @@ public class DatabaseDataStore extends DataStore
                 String managersString = results.getString("managers");
                 List<String> managerNames = Arrays.asList(managersString.split(";"));
                 managerNames = this.convertNameListToUUIDList(managerNames);
-                Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID);
+                Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, entryNames, containerNames, accessorNames, managerNames, inheritNothing, claimID);
 
                 if (removeClaim)
                 {
@@ -433,11 +437,12 @@ public class DatabaseDataStore extends DataStore
         if (claim.ownerID != null) owner = claim.ownerID.toString();
 
         ArrayList<String> builders = new ArrayList<>();
+        ArrayList<String> entries = new ArrayList<>();
         ArrayList<String> containers = new ArrayList<>();
         ArrayList<String> accessors = new ArrayList<>();
         ArrayList<String> managers = new ArrayList<>();
 
-        claim.getPermissions(builders, containers, accessors, managers);
+        claim.getPermissions(builders, entries, containers, accessors, managers);
 
         String buildersString = this.storageStringBuilder(builders);
         String containersString = this.storageStringBuilder(containers);
