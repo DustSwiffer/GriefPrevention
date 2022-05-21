@@ -40,6 +40,10 @@ public enum ClaimPermission
      */
     Access(Messages.NoAccessPermission),
     /**
+     *  Entry permission
+     */
+    Entry(Messages.NoEntryPermission),
+    /**
      * ClaimPermission that allows users to grant ClaimPermissions. Uses a separate track from normal
      * permissions and does not grant any other permissions.
      */

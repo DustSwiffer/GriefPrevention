@@ -20,6 +20,8 @@ package me.ryanhamshire.GriefPrevention;
 
 import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
 import me.ryanhamshire.GriefPrevention.events.VisualizationEvent;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -28,6 +30,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Sound;
 import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
@@ -76,6 +79,7 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.player.PlayerLoginEvent;
 import org.bukkit.event.player.PlayerLoginEvent.Result;
+import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerPickupItemEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -145,10 +149,15 @@ class PlayerEventHandler implements Listener
     synchronized void onPlayerChat(AsyncPlayerChatEvent event)
     {
         Player player = event.getPlayer();
+
         if (!player.isOnline())
         {
             event.setCancelled(true);
             return;
+        }
+        if(!player.hasPermission("griefprevention.unmute")){
+            event.setCancelled(true);
+            player.sendMessage(ChatColor.RED + "You can't speak right now. please accept the rules first.");
         }
 
         String message = event.getMessage();
@@ -211,7 +220,6 @@ class PlayerEventHandler implements Listener
                     playerData.profanityWarned = true;
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoProfanity);
                     event.setCancelled(true);
-                    return;
                 }
             }
 
@@ -2534,7 +2542,7 @@ class PlayerEventHandler implements Listener
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
 
                 //show him where he's working
-                Claim newClaim = new Claim(clickedBlock.getLocation(), clickedBlock.getLocation(), null, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), null);
+                Claim newClaim = new Claim(clickedBlock.getLocation(), clickedBlock.getLocation(), null, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), null);
                 Visualization visualization = Visualization.FromClaim(newClaim, clickedBlock.getY(), VisualizationType.RestoreNature, player.getLocation());
 
                 // alert plugins of a visualization
@@ -2744,4 +2752,173 @@ class PlayerEventHandler implements Listener
 
         return result;
     }
+
+    //region CUSTOMS
+    HashMap<String, String> playerSentGreetingMessage = new HashMap<>();
+    HashMap<String, String> playerSentFarewellMessage = new HashMap<>();
+    HashMap<String, String> playerFalling = new HashMap<>();
+    HashMap<String, String> playerOwnerName = new HashMap<>();
+    HashMap<String, Location> playersLastLocation = new HashMap<>();
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPlayerMovement(PlayerMoveEvent moveEvent) {
+        Location location = moveEvent.getPlayer().getLocation();
+        Player player = moveEvent.getPlayer();
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        Claim claim = this.dataStore.getClaimAt(location, false, playerData.lastClaim);
+        if (claim != null) {
+
+            if (!claim.getOwnerName().equals(playerOwnerName.get(player.getUniqueId().toString()))) {
+                playerClaimBorderAction(player, claim, "switching");
+            } else {
+                playerClaimBorderAction(player, claim, "entering");
+            }
+
+            if (playerHasEntryTrust(player, claim)) {
+                playerClaimBorderAction(player, claim, "entering");
+            } else {
+                Location teleportLocation = playersLastLocation.get(player.getUniqueId().toString());
+
+                for(int i =  (int)teleportLocation.getY(); i > 0; i--){
+                    Location temporaryLocation = teleportLocation;
+                    temporaryLocation.setY(i);
+
+                    if(temporaryLocation.getWorld() != null){
+                        if(!temporaryLocation.getWorld().getBlockAt(temporaryLocation).getType().isAir()){
+                            teleportLocation.setY(temporaryLocation.getY() + 1);
+                            break;
+                        }
+                    } else{
+                        player.sendMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "AN ERROR OCCURED!");
+                        break;
+                    }
+                }
+
+                Visualization visualization = Visualization.FromClaim(claim, player.getLocation().getBlockY(), VisualizationType.ErrorClaim, player.getLocation());
+                Visualization.Apply(player, visualization);
+
+                player.teleport(teleportLocation);
+                player.playSound(teleportLocation, Sound.ENTITY_IRON_GOLEM_STEP, 1, 1);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
+            }
+
+        } else {
+            playerClaimBorderAction(player, null, "leaving");
+            playersLastLocation.put(player.getUniqueId().toString(), location);
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPlayerTeleportToClaim(PlayerTeleportEvent teleportEvent) {
+        Location loc = teleportEvent.getTo();
+        Player player = teleportEvent.getPlayer();
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = this.dataStore.getClaimAt(loc, true, playerData.lastClaim);
+
+        if (claim != null) {
+            if (playerHasEntryTrust(player, claim)) {
+                if (!claim.getOwnerName().equals(playerOwnerName.get(player.getUniqueId().toString()))) {
+                    playerClaimBorderAction(player, claim, "switching");
+                } else {
+                    playerClaimBorderAction(player, claim, "entering");
+                }
+            } else {
+                teleportEvent.setCancelled(true);
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
+            }
+        } else {
+            playerClaimBorderAction(player, claim, "leaving");
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onPlayerDamage(EntityDamageEvent event) {
+        Player player = null;
+        if (event.getEntity() instanceof Player) {
+            player = (Player) event.getEntity();
+        }
+
+        if (player != null) {
+            if (event.getCause() == EntityDamageEvent.DamageCause.FALL) {
+                if (playerFalling.get(player.getUniqueId().toString()) != null && !playerFalling.get(player.getUniqueId().toString()).isEmpty()) {
+                    event.setDamage(0.0);
+                    event.setCancelled(true);
+                    playerFalling.remove(player.getUniqueId().toString());
+                }
+            }
+        }
+    }
+
+    private boolean playerHasEntryTrust(Player player, Claim claim) {
+        ArrayList<String> builders = new ArrayList<>();
+        ArrayList<String> entries = new ArrayList<>();
+        ArrayList<String> containers = new ArrayList<>();
+        ArrayList<String> accessors = new ArrayList<>();
+        ArrayList<String> managers = new ArrayList<>();
+        claim.getPermissions(builders, entries, containers, accessors, managers);
+
+        if (entries.size() >= 1) {
+            return claim.getOwnerName().equals(player.getName()) || (entries.contains(player.getUniqueId().toString()) ||
+                    builders.contains(player.getUniqueId().toString()) ||
+                    containers.contains(player.getUniqueId().toString()) ||
+                    accessors.contains(player.getUniqueId().toString()) ||
+                    managers.contains(player.getUniqueId().toString()));
+        } else {
+            return true;
+        }
+    }
+
+    public void playerClaimBorderAction(Player player, Claim claim, String type) {
+        String sentGreeting = playerSentGreetingMessage.get(player.getUniqueId().toString());
+        String sentFarewell = playerSentFarewellMessage.get(player.getUniqueId().toString());
+
+        if (sentGreeting == null || sentGreeting.isEmpty()) {
+            sentGreeting = "false";
+        }
+        if (sentFarewell == null || sentFarewell.isEmpty()) {
+            sentFarewell = "false";
+        }
+
+        switch (type) {
+            case "entering":
+                if (sentGreeting.equals("false")) {
+                    playerSentFarewellMessage.put(player.getUniqueId().toString(), "false");
+                    playerSentGreetingMessage.put(player.getUniqueId().toString(), "true");
+                    playerOwnerName.put(player.getUniqueId().toString(), claim.getOwnerName());
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                }
+                break;
+            case "leaving":
+                disableFly(player);
+                if ((sentGreeting.equals("true") && sentFarewell.equals("false"))) {
+                    playerSentGreetingMessage.put(player.getUniqueId().toString(), "false");
+                    playerSentFarewellMessage.put(player.getUniqueId().toString(), "true");
+
+                    if (!playerOwnerName.get(player.getUniqueId().toString()).isEmpty()) {
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "Leaving claim of " + ChatColor.DARK_RED.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                        playerOwnerName.remove(player.getUniqueId().toString());
+                    }
+                }
+                break;
+            case "switching":
+                playerSentFarewellMessage.put(player.getUniqueId().toString(), "false");
+                playerSentGreetingMessage.put(player.getUniqueId().toString(), "true");
+                playerOwnerName.put(player.getUniqueId().toString(), claim.getOwnerName());
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                break;
+        }
+    }
+
+    public void disableFly(Player player) {
+        if (player.isFlying()) {
+            if (!player.hasPermission("griefprevention.ignoreclaims")) {
+                player.setFlying(false);
+                player.setAllowFlight(false);
+                playerFalling.put(player.getUniqueId().toString(), "true");
+            }
+        }
+    }
+
+    //endregion
 }
