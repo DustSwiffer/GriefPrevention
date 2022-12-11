@@ -1,7 +1,7 @@
 package me.ryanhamshire.GriefPrevention.events;
 
 
-import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.models.Claim;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;

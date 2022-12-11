@@ -19,10 +19,38 @@
 package me.ryanhamshire.GriefPrevention;
 
 import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
+import me.ryanhamshire.GriefPrevention.constants.TextMode;
+import me.ryanhamshire.GriefPrevention.enums.ClaimPermission;
+import me.ryanhamshire.GriefPrevention.enums.ClaimsMode;
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
+import me.ryanhamshire.GriefPrevention.enums.Messages;
+import me.ryanhamshire.GriefPrevention.enums.PistonMode;
+import me.ryanhamshire.GriefPrevention.enums.ShovelMode;
+import me.ryanhamshire.GriefPrevention.enums.VisualizationType;
 import me.ryanhamshire.GriefPrevention.events.PreventBlockBreakEvent;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
+import me.ryanhamshire.GriefPrevention.handlers.BlockEventHandler;
+import me.ryanhamshire.GriefPrevention.handlers.EconomyHandler;
+import me.ryanhamshire.GriefPrevention.handlers.EntityEventHandler;
+import me.ryanhamshire.GriefPrevention.handlers.PlayerEventHandler;
+import me.ryanhamshire.GriefPrevention.handlers.SiegeEventHandler;
 import me.ryanhamshire.GriefPrevention.metrics.MetricsHandler;
+import me.ryanhamshire.GriefPrevention.models.BlockSnapshot;
+import me.ryanhamshire.GriefPrevention.models.Claim;
+import me.ryanhamshire.GriefPrevention.models.CreateClaimResult;
+import me.ryanhamshire.GriefPrevention.models.PendingItemProtection;
+import me.ryanhamshire.GriefPrevention.models.PlayerData;
+import me.ryanhamshire.GriefPrevention.tasks.AutoExtendClaimTask;
+import me.ryanhamshire.GriefPrevention.tasks.CheckForPortalTrapTask;
+import me.ryanhamshire.GriefPrevention.tasks.DeliverClaimBlocksTask;
+import me.ryanhamshire.GriefPrevention.tasks.EntityCleanupTask;
+import me.ryanhamshire.GriefPrevention.tasks.FindUnusedClaimsTask;
+import me.ryanhamshire.GriefPrevention.tasks.PlayerRescueTask;
+import me.ryanhamshire.GriefPrevention.tasks.PvPImmunityValidationTask;
+import me.ryanhamshire.GriefPrevention.tasks.RestoreNatureProcessingTask;
+import me.ryanhamshire.GriefPrevention.tasks.SendPlayerMessageTask;
+import me.ryanhamshire.GriefPrevention.tasks.WelcomeTask;
 import me.ryanhamshire.GriefPrevention.util.InClaimCalculator;
 import net.luckperms.api.LuckPerms;
 import net.luckperms.api.context.ContextCalculator;
@@ -89,10 +117,10 @@ public class GriefPrevention extends JavaPlugin
     public DataStore dataStore;
 
     //this tracks item stacks expected to drop which will need protection
-    ArrayList<PendingItemProtection> pendingItemWatchList = new ArrayList<>();
+    public ArrayList<PendingItemProtection> pendingItemWatchList = new ArrayList<>();
 
     //log entry manager for GP's custom log files
-    CustomLogger customLogger;
+    public CustomLogger customLogger;
 
     //configuration variables, loaded/saved from a config.yml
 
@@ -3210,7 +3238,7 @@ public class GriefPrevention extends JavaPlugin
     }
 
     //helper method to resolve a player name from the player's UUID
-    static String lookupPlayerName(UUID playerID)
+    public static String lookupPlayerName(UUID playerID)
     {
         //parameter validation
         if (playerID == null) return "somebody";
@@ -3228,7 +3256,7 @@ public class GriefPrevention extends JavaPlugin
     }
 
     //cache for player name lookups, to save searches of all offline players
-    static void cacheUUIDNamePair(UUID playerID, String playerName)
+    public static void cacheUUIDNamePair(UUID playerID, String playerName)
     {
         //store the reverse mapping
         GriefPrevention.instance.playerNameToIDMap.put(playerName, playerID);
@@ -3306,7 +3334,7 @@ public class GriefPrevention extends JavaPlugin
         }
     }
 
-    static boolean isInventoryEmpty(Player player)
+    public static boolean isInventoryEmpty(Player player)
     {
         PlayerInventory inventory = player.getInventory();
         ItemStack[] armorStacks = inventory.getArmorContents();
@@ -3422,7 +3450,7 @@ public class GriefPrevention extends JavaPlugin
     }
 
     //determines whether creative anti-grief rules apply at a location
-    boolean creativeRulesApply(Location location)
+    public boolean creativeRulesApply(Location location)
     {
         if (!this.config_creativeWorldsExist) return false;
 
@@ -3669,7 +3697,7 @@ public class GriefPrevention extends JavaPlugin
         return false;
     }
 
-    void autoExtendClaim(Claim newClaim)
+    public void autoExtendClaim(Claim newClaim)
     {
         //auto-extend it downward to cover anything already built underground
         Location lesserCorner = newClaim.getLesserBoundaryCorner();
@@ -3712,7 +3740,7 @@ public class GriefPrevention extends JavaPlugin
         return true;
     }
 
-    static void banPlayer(Player player, String reason, String source)
+    public static void banPlayer(Player player, String reason, String source)
     {
         if (GriefPrevention.instance.config_ban_useCommand)
         {
@@ -3805,7 +3833,7 @@ public class GriefPrevention extends JavaPlugin
 	*/
 
     //Track scheduled "rescues" so we can cancel them if the player happens to teleport elsewhere so we can cancel it.
-    ConcurrentHashMap<UUID, BukkitTask> portalReturnTaskMap = new ConcurrentHashMap<>();
+    public ConcurrentHashMap<UUID, BukkitTask> portalReturnTaskMap = new ConcurrentHashMap<>();
 
     public void startRescueTask(Player player, Location location)
     {

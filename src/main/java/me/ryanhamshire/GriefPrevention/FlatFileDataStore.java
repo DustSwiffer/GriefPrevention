@@ -19,6 +19,9 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
+import me.ryanhamshire.GriefPrevention.models.Claim;
+import me.ryanhamshire.GriefPrevention.models.PlayerData;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -614,7 +617,7 @@ public class FlatFileDataStore extends DataStore
     }
 
     @Override
-    synchronized PlayerData getPlayerDataFromStorage(UUID playerID)
+    public synchronized PlayerData getPlayerDataFromStorage(UUID playerID)
     {
         File playerFile = new File(playerDataFolderPath + File.separator + playerID.toString());
 

@@ -19,6 +19,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;

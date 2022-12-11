@@ -18,6 +18,9 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
+import me.ryanhamshire.GriefPrevention.models.Claim;
+import me.ryanhamshire.GriefPrevention.models.PlayerData;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -491,7 +494,7 @@ public class DatabaseDataStore extends DataStore
     }
 
     @Override
-    PlayerData getPlayerDataFromStorage(UUID playerID)
+    public PlayerData getPlayerDataFromStorage(UUID playerID)
     {
         PlayerData playerData = new PlayerData();
         playerData.playerID = playerID;

@@ -1,6 +1,6 @@
 package me.ryanhamshire.GriefPrevention.events;
 
-import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.models.Claim;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
@@ -30,8 +30,6 @@ public class ClaimDeletedEvent extends Event
 
     /**
      * Gets the claim to be deleted.
-     *
-     * @return
      */
     public Claim getClaim()
     {

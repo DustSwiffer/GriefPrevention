@@ -1,6 +1,6 @@
 package me.ryanhamshire.GriefPrevention.util;
 
-import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.models.Claim;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;

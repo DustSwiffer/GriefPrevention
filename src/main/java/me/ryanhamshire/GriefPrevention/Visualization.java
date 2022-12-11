@@ -18,6 +18,11 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import me.ryanhamshire.GriefPrevention.enums.VisualizationType;
+import me.ryanhamshire.GriefPrevention.models.Claim;
+import me.ryanhamshire.GriefPrevention.models.PlayerData;
+import me.ryanhamshire.GriefPrevention.models.VisualizationElement;
+import me.ryanhamshire.GriefPrevention.tasks.VisualizationApplicationTask;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Tag;

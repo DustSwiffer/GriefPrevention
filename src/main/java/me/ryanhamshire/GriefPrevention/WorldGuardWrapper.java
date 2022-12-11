@@ -11,6 +11,7 @@ import com.sk89q.worldguard.protection.flags.Flags;
 import com.sk89q.worldguard.protection.managers.RegionManager;
 import com.sk89q.worldguard.protection.regions.ProtectedCuboidRegion;
 import com.sk89q.worldguard.protection.regions.ProtectedRegion;
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 

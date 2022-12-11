@@ -1,6 +1,6 @@
 package me.ryanhamshire.GriefPrevention.events;
 
-import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.models.Claim;
 import org.bukkit.command.CommandSender;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
@@ -61,15 +61,5 @@ public class ClaimCreatedEvent extends Event implements Cancellable
     public Claim getClaim()
     {
         return claim;
-    }
-
-    /**
-     * The actor creating the claim
-     *
-     * @return the CommandSender
-     */
-    public CommandSender getCreator()
-    {
-        return creator;
     }
 }

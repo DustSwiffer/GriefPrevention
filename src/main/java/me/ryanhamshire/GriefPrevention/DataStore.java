@@ -19,10 +19,23 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import me.ryanhamshire.GriefPrevention.constants.TextMode;
+import me.ryanhamshire.GriefPrevention.enums.ClaimPermission;
+import me.ryanhamshire.GriefPrevention.enums.ClaimsMode;
+import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
+import me.ryanhamshire.GriefPrevention.enums.Messages;
+import me.ryanhamshire.GriefPrevention.enums.VisualizationType;
 import me.ryanhamshire.GriefPrevention.events.ClaimCreatedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimDeletedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimExtendEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimModifiedEvent;
+import me.ryanhamshire.GriefPrevention.models.Claim;
+import me.ryanhamshire.GriefPrevention.models.CreateClaimResult;
+import me.ryanhamshire.GriefPrevention.models.CustomizableMessage;
+import me.ryanhamshire.GriefPrevention.models.PlayerData;
+import me.ryanhamshire.GriefPrevention.models.SiegeData;
+import me.ryanhamshire.GriefPrevention.tasks.SecureClaimTask;
+import me.ryanhamshire.GriefPrevention.tasks.SiegeCheckupTask;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Chunk;
@@ -72,8 +85,8 @@ public abstract class DataStore
     protected ConcurrentHashMap<String, Integer> permissionToBonusBlocksMap = new ConcurrentHashMap<>();
 
     //in-memory cache for claim data
-    ArrayList<Claim> claims = new ArrayList<>();
-    ConcurrentHashMap<Long, ArrayList<Claim>> chunksToClaimsMap = new ConcurrentHashMap<>();
+    public ArrayList<Claim> claims = new ArrayList<>();
+    public ConcurrentHashMap<Long, ArrayList<Claim>> chunksToClaimsMap = new ConcurrentHashMap<>();
 
     //in-memory cache for messages
     private String[] messages;
@@ -82,7 +95,7 @@ public abstract class DataStore
     protected final static Pattern uuidpattern = Pattern.compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     //next claim ID
-    Long nextClaimID = (long) 0;
+    public Long nextClaimID = (long) 0;
 
     //path information, for where stuff stored on disk is well...  stored
     protected final static String dataLayerFolderPath = "plugins" + File.separator + "GriefPreventionData";
@@ -104,9 +117,9 @@ public abstract class DataStore
     private int currentSchemaVersion = -1;  //-1 means not determined yet
 
     //video links
-    static final String SURVIVAL_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpuser" + ChatColor.RESET;
-    static final String CREATIVE_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpcrea" + ChatColor.RESET;
-    static final String SUBDIVISION_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpsub" + ChatColor.RESET;
+    public static final String SURVIVAL_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpuser" + ChatColor.RESET;
+    public static final String CREATIVE_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpcrea" + ChatColor.RESET;
+    public static final String SUBDIVISION_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpsub" + ChatColor.RESET;
 
     //list of UUIDs which are soft-muted
     ConcurrentHashMap<UUID, Boolean> softMuteMap = new ConcurrentHashMap<>();
@@ -280,7 +293,7 @@ public abstract class DataStore
     }
 
     //updates soft mute map and data file
-    boolean toggleSoftMute(UUID playerID)
+    public boolean toggleSoftMute(UUID playerID)
     {
         boolean newValue = !this.isSoftMuted(playerID);
 
@@ -339,7 +352,7 @@ public abstract class DataStore
     }
 
     //removes cached player data from memory
-    synchronized void clearCachedPlayerData(UUID playerID)
+    public synchronized void clearCachedPlayerData(UUID playerID)
     {
         this.playerNameToPlayerDataMap.remove(playerID);
     }
@@ -615,21 +628,21 @@ public abstract class DataStore
         return playerData;
     }
 
-    abstract PlayerData getPlayerDataFromStorage(UUID playerID);
+    public abstract PlayerData getPlayerDataFromStorage(UUID playerID);
 
     //deletes a claim or subdivision
-    synchronized public void deleteClaim(Claim claim)
+    public synchronized void deleteClaim(Claim claim)
     {
         this.deleteClaim(claim, true, false);
     }
 
     //deletes a claim or subdivision
-    synchronized public void deleteClaim(Claim claim, boolean releasePets)
+    public synchronized void deleteClaim(Claim claim, boolean releasePets)
     {
         this.deleteClaim(claim, true, releasePets);
     }
 
-    synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean releasePets)
+    public synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean releasePets)
     {
         //delete any children
         for (int j = 1; (j - 1) < claim.children.size(); j++)
@@ -1277,7 +1290,7 @@ public abstract class DataStore
     }
 
     //extend a siege, if it's possible to do so
-    synchronized void tryExtendSiege(Player player, Claim claim)
+    public synchronized void tryExtendSiege(Player player, Claim claim)
     {
         PlayerData playerData = this.getPlayerData(player.getUniqueId());
 
@@ -1353,7 +1366,7 @@ public abstract class DataStore
         return result;
     }
 
-    void resizeClaimWithChecks(Player player, PlayerData playerData, int newx1, int newx2, int newy1, int newy2, int newz1, int newz2)
+    public void resizeClaimWithChecks(Player player, PlayerData playerData, int newx1, int newx2, int newy1, int newy2, int newz1, int newz2)
     {
         //for top level claims, apply size rules and claim blocks requirement
         if (playerData.claimResizing.parent == null)
@@ -1501,7 +1514,7 @@ public abstract class DataStore
     }
 
     //educates a player about /adminclaims and /acb, if he can use them 
-    void tryAdvertiseAdminAlternatives(Player player)
+    public void tryAdvertiseAdminAlternatives(Player player)
     {
         if (player.hasPermission("griefprevention.adminclaims") && player.hasPermission("griefprevention.adjustclaimblocks"))
         {
@@ -1893,7 +1906,7 @@ public abstract class DataStore
     }
 
     //gets all the claims "near" a location
-    Set<Claim> getNearbyClaims(Location location)
+    public Set<Claim> getNearbyClaims(Location location)
     {
         Set<Claim> claims = new HashSet<>();
 

@@ -1,10 +1,12 @@
 package me.ryanhamshire.GriefPrevention;
 
+import me.ryanhamshire.GriefPrevention.models.chat.ChatterData;
+import me.ryanhamshire.GriefPrevention.models.chat.SpamAnalysisResult;
+
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
-class SpamDetector
+public class SpamDetector
 {
     //last chat message shown and its timestamp, regardless of who sent it
     private String lastChatMessage = "";
@@ -28,7 +30,7 @@ class SpamDetector
         return data;
     }
 
-    SpamAnalysisResult AnalyzeMessage(UUID chatterID, String message, long timestamp)
+    public SpamAnalysisResult AnalyzeMessage(UUID chatterID, String message, long timestamp)
     {
         SpamAnalysisResult result = new SpamAnalysisResult();
         result.finalMessage = message;
@@ -214,57 +216,3 @@ class SpamDetector
     }
 }
 
-class SpamAnalysisResult
-{
-    String finalMessage;
-    boolean shouldWarnChatter = false;
-    boolean shouldBanChatter = false;
-    String muteReason;
-}
-
-class ChatterData
-{
-    public String lastMessage = "";                 //the player's last chat message, or slash command complete with parameters 
-    public long lastMessageTimestamp;               //last time the player sent a chat message or used a monitored slash command
-    public int spamLevel = 0;                       //number of consecutive "spams"
-    public boolean spamWarned = false;              //whether the player has received a warning recently
-
-    //all recent message lengths and their total
-    private final ConcurrentLinkedQueue<LengthTimestampPair> recentMessageLengths = new ConcurrentLinkedQueue<>();
-    private int recentTotalLength = 0;
-
-    public void AddMessage(String message, long timestamp)
-    {
-        int length = message.length();
-        this.recentMessageLengths.add(new LengthTimestampPair(length, timestamp));
-        this.recentTotalLength += length;
-
-        this.lastMessage = message;
-        this.lastMessageTimestamp = timestamp;
-    }
-
-    public int getTotalRecentLength(long timestamp)
-    {
-        LengthTimestampPair oldestPair = this.recentMessageLengths.peek();
-        while (oldestPair != null && timestamp - oldestPair.timestamp > 10000)
-        {
-            this.recentMessageLengths.poll();
-            this.recentTotalLength -= oldestPair.length;
-            oldestPair = this.recentMessageLengths.peek();
-        }
-
-        return this.recentTotalLength;
-    }
-}
-
-class LengthTimestampPair
-{
-    public long timestamp;
-    public int length;
-
-    public LengthTimestampPair(int length, long timestamp)
-    {
-        this.length = length;
-        this.timestamp = timestamp;
-    }
-}
