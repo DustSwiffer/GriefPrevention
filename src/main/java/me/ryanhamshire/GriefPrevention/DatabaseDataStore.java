@@ -1,21 +1,3 @@
-/*
-	GriefPrevention Server Plugin for Minecraft
-	Copyright (C) 2012 Ryan Hamshire
-
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
-
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
-
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention;
 
 import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
@@ -147,7 +129,7 @@ public class DatabaseDataStore extends DataStore
             if (!name.startsWith("$")) continue;
 
             String groupName = name.substring(1);
-            if (groupName == null || groupName.isEmpty()) continue;  //defensive coding, avoid unlikely cases
+            if (groupName.isEmpty()) continue;  //defensive coding, avoid unlikely cases
 
             int groupBonusBlocks = results.getInt("bonusblocks");
 
@@ -220,13 +202,10 @@ public class DatabaseDataStore extends DataStore
                         UUID playerID = UUIDFetcher.getUUIDOf(playerName);
 
                         //if successful, update the playerdata row by replacing the player's name with the player's UUID
-                        if (playerID != null)
-                        {
-                            changes.put(playerName, playerID);
-                        }
+                        changes.put(playerName, playerID);
                     }
                     //otherwise leave it as-is. no harm done - it won't be requested by name, and this update only happens once.
-                    catch (Exception ex) { }
+                    catch (Exception ignored) { }
                 }
 
                 //refresh data connection in case data migration took a long time
@@ -269,19 +248,18 @@ public class DatabaseDataStore extends DataStore
         ArrayList<Claim> subdivisionsToLoad = new ArrayList<>();
         List<World> validWorlds = Bukkit.getServer().getWorlds();
 
-        Long claimID = null;
+        long claimID;
         while (results.next())
         {
             try
             {
                 //problematic claims will be removed from secondary storage, and never added to in-memory data store
-                boolean removeClaim = false;
 
                 long parentId = results.getLong("parentid");
                 claimID = results.getLong("id");
                 boolean inheritNothing = results.getBoolean("inheritNothing");
-                Location lesserBoundaryCorner = null;
-                Location greaterBoundaryCorner = null;
+                Location lesserBoundaryCorner;
+                Location greaterBoundaryCorner;
                 String lesserCornerString = "(location not available)";
                 try
                 {
@@ -294,7 +272,7 @@ public class DatabaseDataStore extends DataStore
                 {
                     if (e.getMessage() != null && e.getMessage().contains("World not found"))
                     {
-                        GriefPrevention.AddLogEntry("Failed to load a claim (ID:" + claimID.toString() + ") because its world isn't loaded (yet?).  Please delete the claim or contact the GriefPrevention developer with information about which plugin(s) you're using to load or create worlds.  " + lesserCornerString);
+                        GriefPrevention.AddLogEntry("Failed to load a claim (ID:" + claimID + ") because its world isn't loaded (yet?).  Please delete the claim or contact the GriefPrevention developer with information about which plugin(s) you're using to load or create worlds.  " + lesserCornerString);
                         continue;
                     }
                     else
@@ -305,11 +283,7 @@ public class DatabaseDataStore extends DataStore
 
                 String ownerName = results.getString("owner");
                 UUID ownerID = null;
-                if (ownerName.isEmpty() || ownerName.startsWith("--"))
-                {
-                    ownerID = null;  //administrative land claim or subdivision
-                }
-                else if (this.getSchemaVersion() < 1)
+                if (this.getSchemaVersion() < 1)
                 {
                     try
                     {
@@ -355,11 +329,7 @@ public class DatabaseDataStore extends DataStore
                 managerNames = this.convertNameListToUUIDList(managerNames);
                 Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, entryNames, containerNames, accessorNames, managerNames, inheritNothing, claimID);
 
-                if (removeClaim)
-                {
-                    claimsToRemove.add(claim);
-                }
-                else if (parentId == -1)
+                if (parentId == -1)
                 {
                     //top level claim
                     this.addClaim(claim, false);
@@ -372,7 +342,7 @@ public class DatabaseDataStore extends DataStore
             }
             catch (SQLException e)
             {
-                GriefPrevention.AddLogEntry("Unable to load a claim.  Details: " + e.getMessage() + " ... " + results.toString());
+                GriefPrevention.AddLogEntry("Unable to load a claim.  Details: " + e.getMessage() + " ... " + results);
                 e.printStackTrace();
             }
         }
@@ -515,7 +485,7 @@ public class DatabaseDataStore extends DataStore
         {
             StringWriter errors = new StringWriter();
             e.printStackTrace(new PrintWriter(errors));
-            GriefPrevention.AddLogEntry(playerID + " " + errors.toString(), CustomLogEntryTypes.Exception);
+            GriefPrevention.AddLogEntry(playerID + " " + errors, CustomLogEntryTypes.Exception);
         }
 
         return playerData;
@@ -553,7 +523,7 @@ public class DatabaseDataStore extends DataStore
         {
             StringWriter errors = new StringWriter();
             e.printStackTrace(new PrintWriter(errors));
-            GriefPrevention.AddLogEntry(playerID + " " + errors.toString(), CustomLogEntryTypes.Exception);
+            GriefPrevention.AddLogEntry(playerID + " " + errors, CustomLogEntryTypes.Exception);
         }
     }
 
@@ -620,8 +590,7 @@ public class DatabaseDataStore extends DataStore
                     this.databaseConnection.close();
                 }
             }
-            catch (SQLException e) {}
-            ;
+            catch (SQLException ignored) {}
         }
 
         this.databaseConnection = null;
@@ -702,12 +671,12 @@ public class DatabaseDataStore extends DataStore
      */
     private String storageStringBuilder(ArrayList<String> input)
     {
-        String output = "";
+        StringBuilder output = new StringBuilder();
         for (String string : input)
         {
-            output += string + ";";
+            output.append(string).append(";");
         }
-        return output;
+        return output.toString();
     }
 
 }

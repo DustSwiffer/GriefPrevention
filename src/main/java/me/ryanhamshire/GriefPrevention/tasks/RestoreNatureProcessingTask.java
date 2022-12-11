@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2012 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention.tasks;
 
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -25,8 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.Tag;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Biome;
-import org.bukkit.block.data.Levelled;
-import org.bukkit.block.data.type.Leaves;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -166,26 +146,6 @@ public class RestoreNatureProcessingTask implements Runnable
         GriefPrevention.instance.getServer().getScheduler().scheduleSyncDelayedTask(GriefPrevention.instance, task);
     }
 
-
-    private void removePlayerLeaves()
-    {
-        if (this.seaLevel < 1) return;
-
-        for (int x = 1; x < snapshots.length - 1; x++)
-        {
-            for (int z = 1; z < snapshots[0][0].length - 1; z++)
-            {
-                for (int y = this.seaLevel - 1; y < snapshots[0].length; y++)
-                {
-                    BlockSnapshot block = snapshots[x][y][z];
-                    if (Tag.LEAVES.isTagged(block.typeId) && ((Leaves) block.data).isPersistent())
-                    {
-                        block.typeId = Material.AIR;
-                    }
-                }
-            }
-        }
-    }
 
     //converts sandstone adjacent to sand to sand, and any other sandstone to air
 
@@ -511,93 +471,6 @@ public class RestoreNatureProcessingTask implements Runnable
     }
 
 
-    private void fixWater()
-    {
-        int miny = this.miny;
-        if (miny < 1) miny = 1;
-
-        boolean changed;
-
-        //remove hanging water or lava
-        for (int x = 1; x < snapshots.length - 1; x++)
-        {
-            for (int z = 1; z < snapshots[0][0].length - 1; z++)
-            {
-                for (int y = miny; y < snapshots[0].length - 1; y++)
-                {
-                    BlockSnapshot block = this.snapshots[x][y][z];
-                    BlockSnapshot underBlock = this.snapshots[x][y--][z];
-                    if (block.typeId == Material.WATER || block.typeId == Material.LAVA)
-                    {
-                        // check if block below is air or is a non-source fluid block (level 1-7 = flowing, 8 = falling)
-                        if (underBlock.typeId == Material.AIR || (underBlock.typeId == Material.WATER && (((Levelled) underBlock.data).getLevel() != 0)))
-                        {
-                            block.typeId = Material.AIR;
-                        }
-                    }
-                }
-            }
-        }
-
-        //fill water depressions
-        do
-        {
-            changed = false;
-            for (int y = Math.max(this.seaLevel - 10, 0); y <= this.seaLevel; y++)
-            {
-                for (int x = 1; x < snapshots.length - 1; x++)
-                {
-                    for (int z = 1; z < snapshots[0][0].length - 1; z++)
-                    {
-                        BlockSnapshot block = snapshots[x][y][z];
-
-                        //only consider air blocks and flowing water blocks for upgrade to water source blocks
-                        if (block.typeId == Material.AIR || (block.typeId == Material.WATER && ((Levelled) block.data).getLevel() != 0))
-                        {
-                            BlockSnapshot leftBlock = this.snapshots[x + 1][y][z];
-                            BlockSnapshot rightBlock = this.snapshots[x - 1][y][z];
-                            BlockSnapshot upBlock = this.snapshots[x][y][z + 1];
-                            BlockSnapshot downBlock = this.snapshots[x][y][z - 1];
-                            BlockSnapshot underBlock = this.snapshots[x][y - 1][z];
-
-                            //block underneath MUST be source water
-                            if (!(underBlock.typeId == Material.WATER && ((Levelled) underBlock.data).getLevel() == 0))
-                                continue;
-
-                            //count adjacent source water blocks
-                            byte adjacentSourceWaterCount = 0;
-                            if (leftBlock.typeId == Material.WATER && ((Levelled) leftBlock.data).getLevel() == 0)
-                            {
-                                adjacentSourceWaterCount++;
-                            }
-                            if (rightBlock.typeId == Material.WATER && ((Levelled) rightBlock.data).getLevel() == 0)
-                            {
-                                adjacentSourceWaterCount++;
-                            }
-                            if (upBlock.typeId == Material.WATER && ((Levelled) upBlock.data).getLevel() == 0)
-                            {
-                                adjacentSourceWaterCount++;
-                            }
-                            if (downBlock.typeId == Material.WATER && ((Levelled) downBlock.data).getLevel() == 0)
-                            {
-                                adjacentSourceWaterCount++;
-                            }
-
-                            //at least two adjacent blocks must be source water
-                            if (adjacentSourceWaterCount >= 2)
-                            {
-                                block.typeId = Material.WATER;
-                                ((Levelled) downBlock.data).setLevel(0);
-                                changed = true;
-                            }
-                        }
-                    }
-                }
-            }
-        } while (changed);
-    }
-
-
     private void removeDumpedFluids()
     {
         if (this.seaLevel < 1) return;
@@ -656,7 +529,7 @@ public class RestoreNatureProcessingTask implements Runnable
         playerBlocks.addAll(Tag.CAMPFIRES.getValues());
         playerBlocks.addAll(Tag.CANDLE_CAKES.getValues());
         playerBlocks.addAll(Tag.CANDLES.getValues());
-        playerBlocks.addAll(Tag.CARPETS.getValues());
+        playerBlocks.addAll(Tag.WOOL_CARPETS.getValues());
         playerBlocks.addAll(Tag.CAULDRONS.getValues());
         playerBlocks.addAll(Tag.DOORS.getValues());
         playerBlocks.addAll(Tag.FENCE_GATES.getValues());

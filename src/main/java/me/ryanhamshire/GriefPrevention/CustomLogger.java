@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2015 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
@@ -23,7 +5,7 @@ import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
 import org.bukkit.scheduler.BukkitScheduler;
 
 import java.io.File;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -35,29 +17,36 @@ class CustomLogger
     private final SimpleDateFormat timestampFormat = new SimpleDateFormat("HH:mm");
     private final SimpleDateFormat filenameFormat = new SimpleDateFormat("yyyy_MM_dd");
     private final String logFolderPath = DataStore.dataLayerFolderPath + File.separator + "Logs";
-    private final int secondsBetweenWrites = 300;
 
     //stringbuilder is not thread safe, stringbuffer is
     private final StringBuffer queuedEntries = new StringBuffer();
 
-    CustomLogger()
+    public CustomLogger()
     {
         //ensure log folder exists
         File logFolder = new File(this.logFolderPath);
-        logFolder.mkdirs();
-
-        //delete any outdated log files immediately
-        this.DeleteExpiredLogs();
-
-        //unless disabled, schedule recurring tasks
-        int daysToKeepLogs = GriefPrevention.instance.config_logs_daysToKeep;
-        if (daysToKeepLogs > 0)
+        boolean directoryExisting = logFolder.exists();
+        if (!directoryExisting)
         {
-            BukkitScheduler scheduler = GriefPrevention.instance.getServer().getScheduler();
-            final long ticksPerSecond = 20L;
-            final long ticksPerDay = ticksPerSecond * 60 * 60 * 24;
-            scheduler.runTaskTimerAsynchronously(GriefPrevention.instance, new EntryWriter(), this.secondsBetweenWrites * ticksPerSecond, this.secondsBetweenWrites * ticksPerSecond);
-            scheduler.runTaskTimerAsynchronously(GriefPrevention.instance, new ExpiredLogRemover(), ticksPerDay, ticksPerDay);
+            directoryExisting = logFolder.mkdirs();
+        }
+
+        if (directoryExisting)
+        {
+            //delete any outdated log files immediately
+            this.DeleteExpiredLogs();
+
+            //unless disabled, schedule recurring tasks
+            int daysToKeepLogs = GriefPrevention.instance.config_logs_daysToKeep;
+            if (daysToKeepLogs > 0)
+            {
+                BukkitScheduler scheduler = GriefPrevention.instance.getServer().getScheduler();
+                final long ticksPerSecond = 20L;
+                final long ticksPerDay = ticksPerSecond * 60 * 60 * 24;
+                int secondsBetweenWrites = 300;
+                scheduler.runTaskTimerAsynchronously(GriefPrevention.instance, new EntryWriter(), secondsBetweenWrites * ticksPerSecond, secondsBetweenWrites * ticksPerSecond);
+                scheduler.runTaskTimerAsynchronously(GriefPrevention.instance, new ExpiredLogRemover(), ticksPerDay, ticksPerDay);
+            }
         }
     }
 
@@ -89,10 +78,7 @@ class CustomLogger
         if (entryType == CustomLogEntryTypes.AdminActivity && !GriefPrevention.instance.config_logs_adminEnabled)
             return false;
         if (entryType == CustomLogEntryTypes.Debug && !GriefPrevention.instance.config_logs_debugEnabled) return false;
-        if (entryType == CustomLogEntryTypes.MutedChat && !GriefPrevention.instance.config_logs_mutedChatEnabled)
-            return false;
-
-        return true;
+        return entryType != CustomLogEntryTypes.MutedChat || GriefPrevention.instance.config_logs_mutedChatEnabled;
     }
 
     void WriteEntries()
@@ -108,7 +94,7 @@ class CustomLogger
             File logFile = new File(filepath);
 
             //dump content
-            Files.append(this.queuedEntries.toString(), logFile, Charset.forName("UTF-8"));
+            Files.asCharSink(logFile, StandardCharsets.UTF_8).write(this.queuedEntries.toString());
 
             //in case of a failure to write the above due to exception,
             //the unwritten entries will remain the buffer for the next write to retry
@@ -132,33 +118,44 @@ class CustomLogger
             int daysToKeepLogs = GriefPrevention.instance.config_logs_daysToKeep;
             Calendar expirationBoundary = Calendar.getInstance();
             expirationBoundary.add(Calendar.DATE, -daysToKeepLogs);
-            for (File file : files)
+            if (files != null)
             {
-                if (file.isDirectory()) continue;  //skip any folders
-
-                String filename = file.getName().replace(".log", "");
-                String[] dateParts = filename.split("_");  //format is yyyy_MM_dd
-                if (dateParts.length != 3) continue;
-
-                try
+                for (File file : files)
                 {
-                    int year = Integer.parseInt(dateParts[0]);
-                    int month = Integer.parseInt(dateParts[1]) - 1;
-                    int day = Integer.parseInt(dateParts[2]);
+                    if (file.isDirectory()) continue;  //skip any folders
 
-                    Calendar filedate = Calendar.getInstance();
-                    filedate.set(year, month, day);
-                    if (filedate.before(expirationBoundary))
+                    String filename = file.getName().replace(".log", "");
+                    String[] dateParts = filename.split("_");  //format is yyyy_MM_dd
+                    if (dateParts.length != 3) continue;
+
+                    try
                     {
-                        file.delete();
+                        Calendar filedate = Calendar.getInstance();
+                        filedate.set(filedate.get(Calendar.YEAR), filedate.get(Calendar.MONTH), filedate.get(Calendar.DAY_OF_MONTH));
+                        if (filedate.before(expirationBoundary))
+                        {
+                            boolean fileExisting = file.exists();
+                            boolean fileDeleted = false;
+
+                            if (fileExisting)
+                            {
+                                fileDeleted = file.delete();
+                            }
+                            if (!fileDeleted)
+                            {
+                                return;
+
+                            }
+                        }
+                    }
+                    catch (NumberFormatException e)
+                    {
+                        //throw this away - effectively ignoring any files without the correct filename format
+                        GriefPrevention.AddLogEntry("Ignoring an unexpected file in the abridged logs folder: " + file.getName(), CustomLogEntryTypes.Debug, true);
                     }
                 }
-                catch (NumberFormatException e)
-                {
-                    //throw this away - effectively ignoring any files without the correct filename format
-                    GriefPrevention.AddLogEntry("Ignoring an unexpected file in the abridged logs folder: " + file.getName(), CustomLogEntryTypes.Debug, true);
-                }
             }
+
         }
         catch (Exception e)
         {

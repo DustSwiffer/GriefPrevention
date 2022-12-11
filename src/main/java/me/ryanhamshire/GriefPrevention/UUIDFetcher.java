@@ -13,7 +13,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
@@ -45,6 +44,7 @@ class UUIDFetcher
         this(names, true);
     }
 
+    @SuppressWarnings("BusyWait")
     public void call() throws Exception
     {
         if (lookupCache == null)
@@ -63,8 +63,9 @@ class UUIDFetcher
         OfflinePlayer[] players = GriefPrevention.instance.getServer().getOfflinePlayers();
         for (OfflinePlayer player : players)
         {
-            if (player.getName() != null && player.getUniqueId() != null)
+            if (player.getName() != null)
             {
+                player.getUniqueId();
                 lookupCache.put(player.getName(), player.getUniqueId());
                 lookupCache.put(player.getName().toLowerCase(), player.getUniqueId());
                 correctedNames.put(player.getName().toLowerCase(), player.getName());
@@ -92,7 +93,7 @@ class UUIDFetcher
             UUID uuid = lookupCache.get(name);
             if (uuid != null)
             {
-                GriefPrevention.AddLogEntry(name + " --> " + uuid.toString());
+                GriefPrevention.AddLogEntry(name + " --> " + uuid);
                 names.remove(i--);
             }
         }
@@ -118,8 +119,8 @@ class UUIDFetcher
 
             for (int i = 0; i * PROFILES_PER_REQUEST < names.size(); i++)
             {
-                boolean retry = false;
-                JsonArray array = null;
+                boolean retry;
+                JsonArray array;
                 do
                 {
                     HttpURLConnection connection = createConnection();
@@ -167,7 +168,7 @@ class UUIDFetcher
                     String id = jsonProfile.get("id").getAsString();
                     String name = jsonProfile.get("name").getAsString();
                     UUID uuid = UUIDFetcher.getUUID(id);
-                    GriefPrevention.AddLogEntry(name + " --> " + uuid.toString());
+                    GriefPrevention.AddLogEntry(name + " --> " + uuid);
                     lookupCache.put(name, uuid);
                     lookupCache.put(name.toLowerCase(), uuid);
                 }
@@ -186,7 +187,7 @@ class UUIDFetcher
             for (String name : names)
             {
                 UUID uuid = UUID.nameUUIDFromBytes(("OfflinePlayer:" + name).getBytes(Charsets.UTF_8));
-                GriefPrevention.AddLogEntry(name + " --> " + uuid.toString());
+                GriefPrevention.AddLogEntry(name + " --> " + uuid);
                 lookupCache.put(name, uuid);
                 lookupCache.put(name.toLowerCase(), uuid);
             }
@@ -218,27 +219,7 @@ class UUIDFetcher
         return UUID.fromString(id.substring(0, 8) + "-" + id.substring(8, 12) + "-" + id.substring(12, 16) + "-" + id.substring(16, 20) + "-" + id.substring(20, 32));
     }
 
-    public static byte[] toBytes(UUID uuid)
-    {
-        ByteBuffer byteBuffer = ByteBuffer.wrap(new byte[16]);
-        byteBuffer.putLong(uuid.getMostSignificantBits());
-        byteBuffer.putLong(uuid.getLeastSignificantBits());
-        return byteBuffer.array();
-    }
-
-    public static UUID fromBytes(byte[] array)
-    {
-        if (array.length != 16)
-        {
-            throw new IllegalArgumentException("Illegal byte array length: " + array.length);
-        }
-        ByteBuffer byteBuffer = ByteBuffer.wrap(array);
-        long mostSignificant = byteBuffer.getLong();
-        long leastSignificant = byteBuffer.getLong();
-        return new UUID(mostSignificant, leastSignificant);
-    }
-
-    public static UUID getUUIDOf(String name) throws Exception
+    public static UUID getUUIDOf(String name)
     {
         UUID result = lookupCache.get(name);
         if (result == null)

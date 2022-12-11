@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2012 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention.models;
 
 import me.ryanhamshire.GriefPrevention.handlers.BlockEventHandler;
@@ -68,7 +50,7 @@ public class Claim
     public Date modifiedDate;
 
     //id number.  unique to this claim, never changes.
-    public Long id = null;
+    public Long id;
 
     //ownerID.  for admin claims, this is NULL
     //use getOwnerName() to get a friendly name (will be "an administrator" for admin claims)
@@ -93,7 +75,7 @@ public class Claim
     public Claim parent = null;
 
     // intended for subclaims - they inherit no permissions
-    private boolean inheritNothing = false;
+    private boolean inheritNothing;
 
     //children (subdivisions)
     //note subdivisions themselves never have children
@@ -118,22 +100,13 @@ public class Claim
         return this.id;
     }
 
-    //basic constructor, just notes the creation time
-    //see above declarations for other defaults
-    Claim(Location lesserBoundaryCorner, Location greaterBoundaryCorner, UUID ownerID, List<String> builderIDs, List<String> entyIDs, List<String> entryIDs, List<String> containerIDs, List<String> accessorIDs, List<String> managerIDs, boolean b, Long id)
-    {
-        this.modifiedDate = Calendar.getInstance().getTime();
-    }
-
     //players may only siege someone when he's not in an admin claim
     //and when he has some level of permission in the claim
     public boolean canSiege(Player defender)
     {
         if (this.isAdminClaim()) return false;
 
-        if (this.checkPermission(defender, ClaimPermission.Access, null) != null) return false;
-
-        return true;
+        return this.checkPermission(defender, ClaimPermission.Access, null) == null;
     }
 
     //removes any lava above sea level in a claim
@@ -153,67 +126,36 @@ public class Claim
         Location lesser = this.getLesserBoundaryCorner();
         Location greater = this.getGreaterBoundaryCorner();
 
-        if (lesser.getWorld().getEnvironment() == Environment.NETHER) return;  //don't clean up lava in the nether
-
-        int seaLevel = 0;  //clean up all fluids in the end
-
-        //respect sea level in normal worlds
-        if (lesser.getWorld().getEnvironment() == Environment.NORMAL)
-            seaLevel = GriefPrevention.instance.getSeaLevel(lesser.getWorld());
-
-        for (int x = lesser.getBlockX(); x <= greater.getBlockX(); x++)
+        if (lesser.getWorld() != null)
         {
-            for (int z = lesser.getBlockZ(); z <= greater.getBlockZ(); z++)
+            if (lesser.getWorld().getEnvironment() == Environment.NETHER) return;  //don't clean up lava in the nether
+
+            int seaLevel = 0;  //clean up all fluids in the end
+
+            //respect sea level in normal worlds
+            if (lesser.getWorld().getEnvironment() == Environment.NORMAL)
+                seaLevel = GriefPrevention.instance.getSeaLevel(lesser.getWorld());
+
+            for (int x = lesser.getBlockX(); x <= greater.getBlockX(); x++)
             {
-                for (int y = seaLevel - 1; y <= lesser.getWorld().getMaxHeight(); y++)
+                for (int z = lesser.getBlockZ(); z <= greater.getBlockZ(); z++)
                 {
-                    //dodge the exclusion claim
-                    Block block = lesser.getWorld().getBlockAt(x, y, z);
-                    if (exclusionClaim != null && exclusionClaim.contains(block.getLocation(), true, false)) continue;
-
-                    if (block.getType() == Material.LAVA || block.getType() == Material.WATER)
+                    for (int y = seaLevel - 1; y <= lesser.getWorld().getMaxHeight(); y++)
                     {
-                        block.setType(Material.AIR);
-                    }
-                }
-            }
-        }
-    }
+                        //dodge the exclusion claim
+                        Block block = lesser.getWorld().getBlockAt(x, y, z);
+                        if (exclusionClaim != null && exclusionClaim.contains(block.getLocation(), true, false))
+                            continue;
 
-    //determines whether or not a claim has surface lava
-    //used to warn players when they abandon their claims about automatic fluid cleanup
-    boolean hasSurfaceFluids()
-    {
-        Location lesser = this.getLesserBoundaryCorner();
-        Location greater = this.getGreaterBoundaryCorner();
-
-        //don't bother for very large claims, too expensive
-        if (this.getArea() > 10000) return false;
-
-        int seaLevel = 0;  //clean up all fluids in the end
-
-        //respect sea level in normal worlds
-        if (lesser.getWorld().getEnvironment() == Environment.NORMAL)
-            seaLevel = GriefPrevention.instance.getSeaLevel(lesser.getWorld());
-
-        for (int x = lesser.getBlockX(); x <= greater.getBlockX(); x++)
-        {
-            for (int z = lesser.getBlockZ(); z <= greater.getBlockZ(); z++)
-            {
-                for (int y = seaLevel - 1; y <= lesser.getWorld().getMaxHeight(); y++)
-                {
-                    //dodge the exclusion claim
-                    Block block = lesser.getWorld().getBlockAt(x, y, z);
-
-                    if (block.getType() == Material.WATER || block.getType() == Material.LAVA)
-                    {
-                        return true;
+                        if (block.getType() == Material.LAVA || block.getType() == Material.WATER)
+                        {
+                            block.setType(Material.AIR);
+                        }
                     }
                 }
             }
         }
 
-        return false;
     }
 
     //main constructor.  note that only creating a claim instance does nothing - a claim must be added to the data store to be effective
@@ -247,8 +189,9 @@ public class Claim
         {
             this.setPermission(accessorID, ClaimPermission.Access);
         }
-        for(String entryID : entryIDs){
-            if(entryID != null && !entryID.isEmpty())
+        for (String entryID : entryIDs)
+        {
+            if (entryID != null && !entryID.isEmpty())
             {
                 this.playerIDToClaimPermissionMap.put(entryID, ClaimPermission.Entry);
             }
@@ -266,13 +209,14 @@ public class Claim
         this.inheritNothing = inheritNothing;
     }
 
-    public Claim(Location lesserBoundaryCorner, Location greaterBoundaryCorner, UUID ownerID, List<String> builderIDs, List<String>entryIDs, List<String> containerIDs, List<String> accessorIDs, List<String> managerIDs, Long id)
+    public Claim(Location lesserBoundaryCorner, Location greaterBoundaryCorner, UUID ownerID, List<String> builderIDs, List<String> entryIDs, List<String> containerIDs, List<String> accessorIDs, List<String> managerIDs, Long id)
     {
         this(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderIDs, entryIDs, containerIDs, accessorIDs, managerIDs, false, id);
     }
 
     //produces a copy of a claim.
-    public Claim(Claim claim) {
+    public Claim(Claim claim)
+    {
         this.modifiedDate = claim.modifiedDate;
         this.lesserBoundaryCorner = claim.greaterBoundaryCorner.clone();
         this.greaterBoundaryCorner = claim.greaterBoundaryCorner.clone();
@@ -330,9 +274,9 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Edit} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Edit} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     public String allowEdit(Player player)
@@ -359,9 +303,9 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Build} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Build} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     //build permission check
@@ -392,12 +336,13 @@ public class Claim
             return isBreak;
         }
 
+
+        @SuppressWarnings("NullableProblems")
         @Override
         public HandlerList getHandlers()
         {
             return new HandlerList();
         }
-
     }
 
     public boolean hasExplicitPermission(UUID uuid, ClaimPermission level)
@@ -471,19 +416,6 @@ public class Claim
     }
 
     /**
-     * Check whether or not a UUID has a certain level of trust.
-     *
-     * @param uuid the UUID being checked for permissions
-     * @param permission the ClaimPermission level required
-     * @param event the Event triggering the permission check
-     * @return the denial reason or null if permission is granted
-     */
-    public Supplier<String> checkPermission(UUID uuid, ClaimPermission permission, Event event)
-    {
-        return callPermissionCheck(new ClaimPermissionCheckEvent(uuid, this, permission, event), null);
-    }
-
-    /**
      * Helper method for calling a ClaimPermissionCheckEvent.
      *
      * @param event the ClaimPermissionCheckEvent to call
@@ -496,7 +428,8 @@ public class Claim
         Supplier<String> defaultDenial = getDefaultDenial(event.getCheckedPlayer(), event.getCheckedUUID(),
                 event.getRequiredPermission(), event.getTriggeringEvent());
         // If permission is denied and a clarifying override is provided, use override.
-        if (defaultDenial != null && denialOverride != null) {
+        if (defaultDenial != null && denialOverride != null)
+        {
             defaultDenial = denialOverride;
         }
 
@@ -586,9 +519,9 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Build} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Build} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     public String allowBreak(Player player, Material material)
@@ -598,9 +531,9 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Access} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Access} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     public String allowAccess(Player player)
@@ -610,9 +543,9 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Inventory} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Inventory} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     public String allowContainers(Player player)
@@ -622,22 +555,15 @@ public class Claim
     }
 
     /**
-     * @deprecated Check {@link ClaimPermission#Manage} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      * @param player the Player
      * @return the denial message, or null if the action is allowed
+     * @deprecated Check {@link ClaimPermission#Manage} with {@link #checkPermission(Player, ClaimPermission, Event)}.
      */
     @Deprecated
     public String allowGrantPermission(Player player)
     {
         Supplier<String> supplier = checkPermission(player, ClaimPermission.Manage, null);
         return supplier != null ? supplier.get() : null;
-    }
-
-    public ClaimPermission getPermission(String playerID)
-    {
-        if (playerID == null || playerID.isEmpty()) return null;
-
-        return this.playerIDToClaimPermissionMap.get(playerID.toLowerCase());
     }
 
     //grants a permission for a player or the public
@@ -694,7 +620,8 @@ public class Claim
             {
                 containers.add(entry.getKey());
             }
-            else if(entry.getValue() == ClaimPermission.Entry){
+            else if (entry.getValue() == ClaimPermission.Entry)
+            {
                 entries.add(entry.getKey());
             }
             else
@@ -795,7 +722,8 @@ public class Claim
     //used internally to prevent overlaps when creating claims
     public boolean overlaps(Claim otherClaim)
     {
-        if (!Objects.equals(this.lesserBoundaryCorner.getWorld(), otherClaim.getLesserBoundaryCorner().getWorld())) return false;
+        if (!Objects.equals(this.lesserBoundaryCorner.getWorld(), otherClaim.getLesserBoundaryCorner().getWorld()))
+            return false;
 
         return new BoundingBox(this).intersects(new BoundingBox(otherClaim));
     }
@@ -873,79 +801,76 @@ public class Claim
         return null;
     }
 
-    //implements a strict ordering of claims, used to keep the claims collection sorted for faster searching
-    boolean greaterThan(Claim otherClaim)
-    {
-        Location thisCorner = this.getLesserBoundaryCorner();
-        Location otherCorner = otherClaim.getLesserBoundaryCorner();
-
-        if (thisCorner.getBlockX() > otherCorner.getBlockX()) return true;
-
-        if (thisCorner.getBlockX() < otherCorner.getBlockX()) return false;
-
-        if (thisCorner.getBlockZ() > otherCorner.getBlockZ()) return true;
-
-        if (thisCorner.getBlockZ() < otherCorner.getBlockZ()) return false;
-
-        return thisCorner.getWorld().getName().compareTo(otherCorner.getWorld().getName()) < 0;
-    }
-
 
     public long getPlayerInvestmentScore()
     {
         //decide which blocks will be considered player placed
         Location lesserBoundaryCorner = this.getLesserBoundaryCorner();
-        Set<Material> playerBlocks = RestoreNatureProcessingTask.getPlayerBlocks(lesserBoundaryCorner.getWorld().getEnvironment(), lesserBoundaryCorner.getBlock().getBiome());
 
-        //scan the claim for player placed blocks
-        double score = 0;
-
-        boolean creativeMode = GriefPrevention.instance.creativeRulesApply(lesserBoundaryCorner);
-
-        for (int x = this.lesserBoundaryCorner.getBlockX(); x <= this.greaterBoundaryCorner.getBlockX(); x++)
+        World world = lesserBoundaryCorner.getWorld();
+        if (world != null)
         {
-            for (int z = this.lesserBoundaryCorner.getBlockZ(); z <= this.greaterBoundaryCorner.getBlockZ(); z++)
-            {
-                int y = this.lesserBoundaryCorner.getBlockY();
-                for (; y < GriefPrevention.instance.getSeaLevel(this.lesserBoundaryCorner.getWorld()) - 5; y++)
-                {
-                    Block block = this.lesserBoundaryCorner.getWorld().getBlockAt(x, y, z);
-                    if (playerBlocks.contains(block.getType()))
-                    {
-                        if (block.getType() == Material.CHEST && !creativeMode)
-                        {
-                            score += 10;
-                        }
-                        else
-                        {
-                            score += .5;
-                        }
-                    }
-                }
+            Set<Material> playerBlocks = RestoreNatureProcessingTask.getPlayerBlocks(lesserBoundaryCorner.getWorld().getEnvironment(), lesserBoundaryCorner.getBlock().getBiome());
 
-                for (; y < this.lesserBoundaryCorner.getWorld().getMaxHeight(); y++)
+            //scan the claim for player placed blocks
+            double score = 0;
+
+            boolean creativeMode = GriefPrevention.instance.creativeRulesApply(lesserBoundaryCorner);
+
+            if (this.lesserBoundaryCorner != null)
+            {
+                for (int x = this.lesserBoundaryCorner.getBlockX(); x <= this.greaterBoundaryCorner.getBlockX(); x++)
                 {
-                    Block block = this.lesserBoundaryCorner.getWorld().getBlockAt(x, y, z);
-                    if (playerBlocks.contains(block.getType()))
+                    for (int z = this.lesserBoundaryCorner.getBlockZ(); z <= this.greaterBoundaryCorner.getBlockZ(); z++)
                     {
-                        if (block.getType() == Material.CHEST && !creativeMode)
+                        int y = this.lesserBoundaryCorner.getBlockY();
+                        if (this.lesserBoundaryCorner.getWorld() != null)
                         {
-                            score += 10;
+                            for (; y < GriefPrevention.instance.getSeaLevel(this.lesserBoundaryCorner.getWorld()) - 5; y++)
+                            {
+                                Block block = this.lesserBoundaryCorner.getWorld().getBlockAt(x, y, z);
+                                if (playerBlocks.contains(block.getType()))
+                                {
+                                    if (block.getType() == Material.CHEST && !creativeMode)
+                                    {
+                                        score += 10;
+                                    }
+                                    else
+                                    {
+                                        score += .5;
+                                    }
+                                }
+                            }
+
+                            for (; y < this.lesserBoundaryCorner.getWorld().getMaxHeight(); y++)
+                            {
+                                Block block = this.lesserBoundaryCorner.getWorld().getBlockAt(x, y, z);
+                                if (playerBlocks.contains(block.getType()))
+                                {
+                                    if (block.getType() == Material.CHEST && !creativeMode)
+                                    {
+                                        score += 10;
+                                    }
+                                    else if (creativeMode && (block.getType() == Material.LAVA))
+                                    {
+                                        score -= 10;
+                                    }
+                                    else
+                                    {
+                                        score += 1;
+                                    }
+                                }
+                            }
                         }
-                        else if (creativeMode && (block.getType() == Material.LAVA))
-                        {
-                            score -= 10;
-                        }
-                        else
-                        {
-                            score += 1;
-                        }
+
                     }
                 }
             }
+
+            return (long) score;
         }
 
-        return (long) score;
+        return 0;
     }
 
     public ArrayList<Chunk> getChunks()
@@ -956,11 +881,14 @@ public class Claim
         Chunk lesserChunk = this.getLesserBoundaryCorner().getChunk();
         Chunk greaterChunk = this.getGreaterBoundaryCorner().getChunk();
 
-        for (int x = lesserChunk.getX(); x <= greaterChunk.getX(); x++)
+        if (world != null)
         {
-            for (int z = lesserChunk.getZ(); z <= greaterChunk.getZ(); z++)
+            for (int x = lesserChunk.getX(); x <= greaterChunk.getX(); x++)
             {
-                chunks.add(world.getChunkAt(x, z));
+                for (int z = lesserChunk.getZ(); z <= greaterChunk.getZ(); z++)
+                {
+                    chunks.add(world.getChunkAt(x, z));
+                }
             }
         }
 

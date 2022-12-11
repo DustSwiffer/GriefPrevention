@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2012 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention.tasks;
 
 import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
@@ -32,7 +14,7 @@ import java.util.UUID;
 
 public class CleanupUnusedClaimPreTask implements Runnable
 {
-    private UUID ownerID = null;
+    private final UUID ownerID;
 
     public CleanupUnusedClaimPreTask(UUID uuid)
     {
@@ -46,7 +28,7 @@ public class CleanupUnusedClaimPreTask implements Runnable
         PlayerData ownerData = GriefPrevention.instance.dataStore.getPlayerDataFromStorage(ownerID);
         OfflinePlayer ownerInfo = Bukkit.getServer().getOfflinePlayer(ownerID);
 
-        GriefPrevention.AddLogEntry("Looking for expired claims.  Checking data for " + ownerID.toString(), CustomLogEntryTypes.Debug, true);
+        GriefPrevention.AddLogEntry("Looking for expired claims.  Checking data for " + ownerID, CustomLogEntryTypes.Debug, true);
 
         //expiration code uses last logout timestamp to decide whether to expire claims
         //don't expire claims for online players
@@ -82,7 +64,7 @@ public class CleanupUnusedClaimPreTask implements Runnable
 
         if (claimToExpire == null)
         {
-            GriefPrevention.AddLogEntry("Unable to find a claim to expire for " + ownerID.toString(), CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry("Unable to find a claim to expire for " + ownerID, CustomLogEntryTypes.Debug, false);
             return;
         }
 

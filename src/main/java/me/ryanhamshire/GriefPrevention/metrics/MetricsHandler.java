@@ -4,8 +4,6 @@ import me.ryanhamshire.GriefPrevention.enums.ClaimsMode;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.World;
 
-import java.util.concurrent.Callable;
-
 /**
  * Created on 9/22/2018.
  *
@@ -116,13 +114,6 @@ public class MetricsHandler
 
     private void addSimplePie(String id, String value)
     {
-        metrics.addCustomChart(new Metrics.SimplePie(id, new Callable<String>()
-        {
-            @Override
-            public String call() throws Exception
-            {
-                return value;
-            }
-        }));
+        metrics.addCustomChart(new Metrics.SimplePie(id, () -> value));
     }
 }

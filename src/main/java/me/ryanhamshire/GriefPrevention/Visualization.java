@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2012 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention;
 
 import me.ryanhamshire.GriefPrevention.enums.VisualizationType;
@@ -55,10 +37,13 @@ public class Visualization
             Visualization.Revert(player);
         }
 
-        //if he's online, create a task to send him the visualization
-        if (player.isOnline() && visualization.elements.size() > 0 && visualization.elements.get(0).location.getWorld().equals(player.getWorld()))
-        {
-            GriefPrevention.instance.getServer().getScheduler().scheduleSyncDelayedTask(GriefPrevention.instance, new VisualizationApplicationTask(player, playerData, visualization), 1L);
+        World visualizationWorld = visualization.elements.get(0).location.getWorld();
+        if (visualizationWorld != null) {
+            //if he's online, create a task to send him the visualization
+            if (player.isOnline() && visualization.elements.size() > 0 && visualizationWorld.equals(player.getWorld()))
+            {
+                GriefPrevention.instance.getServer().getScheduler().scheduleSyncDelayedTask(GriefPrevention.instance, new VisualizationApplicationTask(player, playerData, visualization), 1L);
+            }
         }
     }
 

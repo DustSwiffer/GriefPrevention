@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2011 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention.models;
 
 import me.ryanhamshire.GriefPrevention.enums.CustomLogEntryTypes;
@@ -106,9 +88,6 @@ public class PlayerData
 
     public InetAddress ipAddress;
 
-    //for addons to set per-player claim limits. Any negative value will use config's value
-    private int AccruedClaimBlocksLimit = -1;
-
     //whether or not this player has received a message about unlocking death drops since his last death
     public boolean receivedDropUnlockAdvertisement = false;
 
@@ -145,7 +124,7 @@ public class PlayerData
 
         long elapsed = now - this.lastPvpTimestamp;
 
-        if (elapsed > GriefPrevention.instance.config_pvp_combatTimeoutSeconds * 1000) //X seconds
+        if (elapsed > GriefPrevention.instance.config_pvp_combatTimeoutSeconds * 1000L) //X seconds
         {
             this.lastPvpTimestamp = 0;
             return false;
@@ -332,14 +311,8 @@ public class PlayerData
     //Limit can be changed by addons
     public int getAccruedClaimBlocksLimit()
     {
-        if (this.AccruedClaimBlocksLimit < 0)
-            return GriefPrevention.instance.config_claims_maxAccruedBlocks_default;
-        return this.AccruedClaimBlocksLimit;
-    }
-
-    public void setAccruedClaimBlocksLimit(int limit)
-    {
-        this.AccruedClaimBlocksLimit = limit;
+        //for addons to set per-player claim limits. Any negative value will use config's value
+        return GriefPrevention.instance.config_claims_maxAccruedBlocks_default;
     }
 
     public void accrueBlocks(int howMany)

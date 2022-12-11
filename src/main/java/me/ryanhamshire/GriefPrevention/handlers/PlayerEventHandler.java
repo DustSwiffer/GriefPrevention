@@ -1172,7 +1172,8 @@ public class PlayerEventHandler implements Listener
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
-        if (claim != null){
+        if (claim != null)
+        {
             playerData.lastClaim = claim;
             if (claim.checkPermission(player, ClaimPermission.Build, event) == null)
                 return;
@@ -2005,7 +2006,7 @@ public class PlayerEventHandler implements Listener
                 if (action == Action.RIGHT_CLICK_AIR)
                 {
                     //try to find a far away non-air block along line of sight
-                    clickedBlock = getTargetBlock(player, 100);
+                    clickedBlock = getTargetBlock(player);
                     clickedBlockType = clickedBlock.getType();
                 }
 
@@ -2110,7 +2111,7 @@ public class PlayerEventHandler implements Listener
             if (action == Action.RIGHT_CLICK_AIR)
             {
                 //try to find a far away non-air block along line of sight
-                clickedBlock = getTargetBlock(player, 100);
+                clickedBlock = getTargetBlock(player);
                 clickedBlockType = clickedBlock.getType();
             }
 
@@ -2380,7 +2381,7 @@ public class PlayerEventHandler implements Listener
                         else
                         {
                             //if last shovel location was in a different world, assume the player is starting the create-claim workflow over
-                            if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
+                            if (playerData.lastShovelLocation.getWorld() != null && !playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
                             {
                                 playerData.lastShovelLocation = null;
                                 this.onPlayerInteract(event);
@@ -2497,7 +2498,7 @@ public class PlayerEventHandler implements Listener
             else
             {
                 //if last shovel location was in a different world, assume the player is starting the create-claim workflow over
-                if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
+                if (lastShovelLocation.getWorld() != null && !lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
                 {
                     playerData.lastShovelLocation = null;
                     this.onPlayerInteract(event);
@@ -2585,7 +2586,6 @@ public class PlayerEventHandler implements Listener
                         GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
                     }
 
-                    return;
                 }
 
                 //otherwise, advise him on the /trust command and show him his new claim
@@ -2643,7 +2643,7 @@ public class PlayerEventHandler implements Listener
         Boolean cachedValue = this.inventoryHolderCache.get(cacheKey);
         if (cachedValue != null)
         {
-            return cachedValue.booleanValue();
+            return cachedValue;
 
         }
         else
@@ -2675,12 +2675,12 @@ public class PlayerEventHandler implements Listener
         }
     }
 
-    static Block getTargetBlock(Player player, int maxDistance) throws IllegalStateException
+    static Block getTargetBlock(Player player) throws IllegalStateException
     {
         Location eye = player.getEyeLocation();
         Material eyeMaterial = eye.getBlock().getType();
         boolean passThroughWater = (eyeMaterial == Material.WATER);
-        BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), maxDistance);
+        BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), 100);
         Block result = player.getLocation().getBlock().getRelative(BlockFace.UP);
         while (iterator.hasNext())
         {
@@ -2732,20 +2732,19 @@ public class PlayerEventHandler implements Listener
 
                 for (int i = (int) teleportLocation.getY(); i > 0; i--)
                 {
-                    Location temporaryLocation = teleportLocation;
-                    temporaryLocation.setY(i);
+                    teleportLocation.setY(i);
 
-                    if (temporaryLocation.getWorld() != null)
+                    if (teleportLocation.getWorld() != null)
                     {
-                        if (!temporaryLocation.getWorld().getBlockAt(temporaryLocation).getType().isAir())
+                        if (!teleportLocation.getWorld().getBlockAt(teleportLocation).getType().isAir())
                         {
-                            teleportLocation.setY(temporaryLocation.getY() + 1);
+                            teleportLocation.setY(teleportLocation.getY() + 1);
                             break;
                         }
                     }
                     else
                     {
-                        player.sendMessage(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "AN ERROR OCCURED!");
+                        player.sendMessage(ChatColor.RED + ChatColor.BOLD.toString() + "AN ERROR OCCURED!");
                         break;
                     }
                 }
@@ -2755,7 +2754,7 @@ public class PlayerEventHandler implements Listener
 
                 player.teleport(teleportLocation);
                 player.playSound(teleportLocation, Sound.ENTITY_IRON_GOLEM_STEP, 1, 1);
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
             }
 
         }
@@ -2790,12 +2789,12 @@ public class PlayerEventHandler implements Listener
             else
             {
                 teleportEvent.setCancelled(true);
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED + ChatColor.BOLD.toString() + "You are not allowed to enter this claim"));
             }
         }
         else
         {
-            playerClaimBorderAction(player, claim, "leaving");
+            playerClaimBorderAction(player, null, "leaving");
         }
     }
 
@@ -2867,7 +2866,7 @@ public class PlayerEventHandler implements Listener
                     playerSentFarewellMessage.put(player.getUniqueId().toString(), "false");
                     playerSentGreetingMessage.put(player.getUniqueId().toString(), "true");
                     playerOwnerName.put(player.getUniqueId().toString(), claim.getOwnerName());
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN + ChatColor.BOLD + playerOwnerName.get(player.getUniqueId().toString())));
                 }
                 break;
             case "leaving":
@@ -2879,7 +2878,7 @@ public class PlayerEventHandler implements Listener
 
                     if (!playerOwnerName.get(player.getUniqueId().toString()).isEmpty())
                     {
-                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED.toString() + ChatColor.BOLD.toString() + "Leaving claim of " + ChatColor.DARK_RED.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.RED + ChatColor.BOLD.toString() + "Leaving claim of " + ChatColor.DARK_RED + ChatColor.BOLD + playerOwnerName.get(player.getUniqueId().toString())));
                         playerOwnerName.remove(player.getUniqueId().toString());
                     }
                 }
@@ -2888,7 +2887,7 @@ public class PlayerEventHandler implements Listener
                 playerSentFarewellMessage.put(player.getUniqueId().toString(), "false");
                 playerSentGreetingMessage.put(player.getUniqueId().toString(), "true");
                 playerOwnerName.put(player.getUniqueId().toString(), claim.getOwnerName());
-                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN.toString() + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN.toString() + ChatColor.BOLD.toString() + playerOwnerName.get(player.getUniqueId().toString())));
+                player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(ChatColor.GREEN + ChatColor.BOLD.toString() + "Entering claim of " + ChatColor.DARK_GREEN + ChatColor.BOLD + playerOwnerName.get(player.getUniqueId().toString())));
                 break;
         }
     }

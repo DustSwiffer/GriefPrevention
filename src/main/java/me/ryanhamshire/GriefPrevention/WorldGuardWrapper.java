@@ -17,7 +17,7 @@ import org.bukkit.entity.Player;
 
 class WorldGuardWrapper
 {
-    private WorldGuardPlugin worldGuard = null;
+    private final WorldGuardPlugin worldGuard;
 
     public WorldGuardWrapper() throws ClassNotFoundException
     {
@@ -30,29 +30,38 @@ class WorldGuardWrapper
         {
             BukkitPlayer localPlayer = new BukkitPlayer(this.worldGuard, creatingPlayer);
             WorldGuardPlatform platform = WorldGuard.getInstance().getPlatform();
-            World world = platform.getMatcher().getWorldByName(lesserCorner.getWorld().getName());
-
-            if (platform.getSessionManager().hasBypass(localPlayer, world)) return true;
-
-            RegionManager manager = platform.getRegionContainer().get(world);
-
-            if (manager != null)
+            org.bukkit.World lesserCornerWorld = lesserCorner.getWorld();
+            if (lesserCornerWorld != null)
             {
-                ProtectedCuboidRegion tempRegion = new ProtectedCuboidRegion(
-                        "GP_TEMP",
-                        BlockVector3.at(lesserCorner.getX(), 0, lesserCorner.getZ()),
-                        BlockVector3.at(greaterCorner.getX(), world.getMaxY(), greaterCorner.getZ()));
+                World world = platform.getMatcher().getWorldByName(lesserCornerWorld.getName());
 
-                ApplicableRegionSet overlaps = manager.getApplicableRegions(tempRegion);
-                for (ProtectedRegion r : overlaps.getRegions())
+                if (world != null)
                 {
-                    if (!manager.getApplicableRegions(r).testState(localPlayer, Flags.BUILD))
+                    if (platform.getSessionManager().hasBypass(localPlayer, world)) return true;
+
+                    RegionManager manager = platform.getRegionContainer().get(world);
+
+                    if (manager != null)
                     {
-                        return false;
+                        ProtectedCuboidRegion tempRegion = new ProtectedCuboidRegion(
+                                "GP_TEMP",
+                                BlockVector3.at(lesserCorner.getX(), 0, lesserCorner.getZ()),
+                                BlockVector3.at(greaterCorner.getX(), world.getMaxY(), greaterCorner.getZ()));
+
+                        ApplicableRegionSet overlaps = manager.getApplicableRegions(tempRegion);
+                        for (ProtectedRegion r : overlaps.getRegions())
+                        {
+                            if (!manager.getApplicableRegions(r).testState(localPlayer, Flags.BUILD))
+                            {
+                                return false;
+                            }
+                        }
+                        return true;
                     }
                 }
-                return true;
+
             }
+
 
             return true;
         }

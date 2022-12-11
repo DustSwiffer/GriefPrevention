@@ -12,11 +12,13 @@ public class InClaimCalculator  implements ContextCalculator<Player>
 {
     private static final String inclaimKey = "griefprevention:in-claim";
     private static final String claimTypeKey = "griefprevention:claim";
-    private DataStore dataStore;
+    private final DataStore dataStore;
     public InClaimCalculator(DataStore dataStore){
         this.dataStore = dataStore;
     }
+
     @Override
+    @SuppressWarnings("NullableProblems")
     public void calculate(Player target, ContextConsumer consumer) {
         Location loc = target.getLocation();
         PlayerData playerData = this.dataStore.getPlayerData(target.getUniqueId());
