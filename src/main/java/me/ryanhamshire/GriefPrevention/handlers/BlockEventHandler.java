@@ -1,21 +1,3 @@
-/*
-    GriefPrevention Server Plugin for Minecraft
-    Copyright (C) 2012 Ryan Hamshire
-
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
 package me.ryanhamshire.GriefPrevention.handlers;
 
 import me.ryanhamshire.GriefPrevention.enums.ClaimPermission;
@@ -46,6 +28,7 @@ import org.bukkit.block.PistonMoveReaction;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.type.Chest;
 import org.bukkit.block.data.type.Dispenser;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
@@ -133,7 +116,6 @@ public class BlockEventHandler implements Listener
         {
             GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason);
             breakEvent.setCancelled(true);
-            return;
         }
     }
 
@@ -143,8 +125,6 @@ public class BlockEventHandler implements Listener
     {
         Player player = event.getPlayer();
         Block sign = event.getBlock();
-
-        if (player == null || sign == null) return;
 
         String noBuildReason = GriefPrevention.instance.allowBuild(player, sign.getLocation(), sign.getType());
         if (noBuildReason != null)
@@ -161,12 +141,17 @@ public class BlockEventHandler implements Listener
         boolean notEmpty = false;
         for (int i = 0; i < event.getLines().length; i++)
         {
-            String withoutSpaces = event.getLine(i).replace(" ", "");
-            if (!withoutSpaces.isEmpty())
+            String signLine = event.getLine(i);
+            if (signLine != null && !signLine.isEmpty())
             {
-                notEmpty = true;
-                lines.append("\n  ").append(event.getLine(i));
+                String withoutSpaces = signLine.replace(" ", "");
+                if (!withoutSpaces.isEmpty())
+                {
+                    notEmpty = true;
+                    lines.append("\n  ").append(event.getLine(i));
+                }
             }
+
         }
 
         String signMessage = lines.toString();
@@ -178,7 +163,6 @@ public class BlockEventHandler implements Listener
             return;
         }
 
-        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         //if not empty and wasn't the same as the last sign, log it and remember it for later
         //This has been temporarily removed since `signMessage` includes location, not just the message. Waste of memory IMO
         //if(notEmpty && (playerData.lastSignMessage == null || !playerData.lastSignMessage.equals(signMessage)))
@@ -304,7 +288,7 @@ public class BlockEventHandler implements Listener
 
         //If block is a chest, don't allow a DoubleChest to form across a claim boundary
         denyConnectingDoubleChestsAcrossClaimBoundary(claim, block, player);
-        
+
         if (claim != null)
         {
             playerData.lastClaim = claim;
@@ -483,13 +467,16 @@ public class BlockEventHandler implements Listener
         //limit active blocks in creative mode worlds
         if (!player.hasPermission("griefprevention.adminclaims") && GriefPrevention.instance.creativeRulesApply(block.getLocation()) && isActiveBlock(block))
         {
-            String noPlaceReason = claim.allowMoreActiveBlocks();
-            if (noPlaceReason != null)
+            if (claim != null)
             {
-                GriefPrevention.sendMessage(player, TextMode.Err, noPlaceReason);
-                placeEvent.setCancelled(true);
-                return;
+                String noPlaceReason = claim.allowMoreActiveBlocks();
+                if (noPlaceReason != null)
+                {
+                    GriefPrevention.sendMessage(player, TextMode.Err, noPlaceReason);
+                    placeEvent.setCancelled(true);
+                }
             }
+
         }
     }
 
@@ -505,16 +492,16 @@ public class BlockEventHandler implements Listener
 
     static boolean isActiveBlock(Material type)
     {
-        if (type == Material.HOPPER || type == Material.BEACON || type == Material.SPAWNER) return true;
-        return false;
+        return type == Material.HOPPER || type == Material.BEACON || type == Material.SPAWNER;
     }
 
-    private static final BlockFace[] HORIZONTAL_DIRECTIONS = new BlockFace[] {
+    private static final BlockFace[] HORIZONTAL_DIRECTIONS = new BlockFace[]{
             BlockFace.NORTH,
             BlockFace.EAST,
             BlockFace.SOUTH,
             BlockFace.WEST
     };
+
     private void denyConnectingDoubleChestsAcrossClaimBoundary(Claim claim, Block block, Player player)
     {
         UUID claimOwner = null;
@@ -731,23 +718,28 @@ public class BlockEventHandler implements Listener
         //don't track in worlds where claims are not enabled
         if (!GriefPrevention.instance.claimsEnabledForWorld(igniteEvent.getBlock().getWorld())) return;
 
-        if (igniteEvent.getCause() == IgniteCause.LIGHTNING && GriefPrevention.instance.dataStore.getClaimAt(igniteEvent.getIgnitingEntity().getLocation(), false, null) != null)
+        Entity igniteEntity = igniteEvent.getIgnitingEntity();
+        if (igniteEntity != null)
         {
-            igniteEvent.setCancelled(true); //BlockIgniteEvent is called before LightningStrikeEvent. See #532. However, see #1125 for further discussion on detecting trident-caused lightning.
-        }
-
-        // If a fire is started by a fireball from a dispenser, allow it if the dispenser is in the same claim.
-        if (igniteEvent.getCause() == IgniteCause.FIREBALL && igniteEvent.getIgnitingEntity() instanceof Fireball)
-        {
-            ProjectileSource shooter = ((Fireball) igniteEvent.getIgnitingEntity()).getShooter();
-            if (shooter instanceof BlockProjectileSource)
+            if (igniteEvent.getCause() == IgniteCause.LIGHTNING && GriefPrevention.instance.dataStore.getClaimAt(igniteEntity.getLocation(), false, null) != null)
             {
-                Claim claim = GriefPrevention.instance.dataStore.getClaimAt(igniteEvent.getBlock().getLocation(), false, null);
-                if (claim != null && GriefPrevention.instance.dataStore.getClaimAt(((BlockProjectileSource) shooter).getBlock().getLocation(), false, claim) == claim)
+                igniteEvent.setCancelled(true); //BlockIgniteEvent is called before LightningStrikeEvent. See #532. However, see #1125 for further discussion on detecting trident-caused lightning.
+            }
+
+            // If a fire is started by a fireball from a dispenser, allow it if the dispenser is in the same claim.
+            if (igniteEvent.getCause() == IgniteCause.FIREBALL && igniteEntity instanceof Fireball)
+            {
+                ProjectileSource shooter = ((Fireball) igniteEntity).getShooter();
+                if (shooter instanceof BlockProjectileSource)
                 {
-                    return;
+                    Claim claim = GriefPrevention.instance.dataStore.getClaimAt(igniteEvent.getBlock().getLocation(), false, null);
+                    if (claim != null && GriefPrevention.instance.dataStore.getClaimAt(((BlockProjectileSource) shooter).getBlock().getLocation(), false, claim) == claim)
+                    {
+                        return;
+                    }
                 }
             }
+
         }
 
         // Arrow ignition is handled by the EntityChangeBlockEvent.
@@ -939,7 +931,6 @@ public class BlockEventHandler implements Listener
         {
             event.setCancelled(true);
             GriefPrevention.sendMessage(shooter, TextMode.Err, allowContainer.get());
-            return;
         }
     }
 
@@ -1034,22 +1025,26 @@ public class BlockEventHandler implements Listener
             Item item = event.getItem();
             List<MetadataValue> data = item.getMetadata("GP_ITEMOWNER");
             //if this is marked as belonging to a player
-            if (data != null && data.size() > 0)
+            if (data.size() > 0)
             {
                 UUID ownerID = (UUID) data.get(0).value();
 
-                //has that player unlocked his drops?
-                OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
-                if (owner.isOnline())
+                if (ownerID != null)
                 {
-                    PlayerData playerData = this.dataStore.getPlayerData(ownerID);
-
-                    //if locked, don't allow pickup
-                    if (!playerData.dropsAreUnlocked)
+                    //has that player unlocked his drops?
+                    OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
+                    if (owner.isOnline())
                     {
-                        event.setCancelled(true);
+                        PlayerData playerData = this.dataStore.getPlayerData(ownerID);
+
+                        //if locked, don't allow pickup
+                        if (!playerData.dropsAreUnlocked)
+                        {
+                            event.setCancelled(true);
+                        }
                     }
                 }
+
             }
         }
     }

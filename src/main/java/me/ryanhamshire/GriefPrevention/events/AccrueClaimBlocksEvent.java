@@ -34,17 +34,6 @@ public class AccrueClaimBlocksEvent extends Event
     /**
      * @param player Player receiving accruals
      * @param blocksToAccrue Blocks to accrue
-     * @deprecated Use {@link #AccrueClaimBlocksEvent(Player, int, boolean)} instead
-     */
-    public AccrueClaimBlocksEvent(Player player, int blocksToAccrue)
-    {
-        this.player = player;
-        this.blocksToAccrue = blocksToAccrue / 6;
-    }
-
-    /**
-     * @param player Player receiving accruals
-     * @param blocksToAccrue Blocks to accrue
      * @param isIdle Whether player is detected as idle
      */
     public AccrueClaimBlocksEvent(Player player, int blocksToAccrue, boolean isIdle)
