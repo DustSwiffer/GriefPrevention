@@ -120,7 +120,7 @@ public class EconomyHandler implements Listener
      * Wrapper class used to prevent Bukkit from logging an error and
      * preventing registering events for the listener when Vault is not loaded.
      */
-    static class EconomyWrapper
+    public static class EconomyWrapper
     {
 
         private final Economy economy;
