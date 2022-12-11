@@ -315,7 +315,7 @@ public class Visualization
             return true;
 
         return (waterIsTransparent && block.getType() == Material.WATER) ||
-                block.getType().isTransparent();
+                !block.getType().isOccluding();
     }
 
     public static Visualization fromClaims(Iterable<Claim> claims, int height, VisualizationType type, Location locality)
