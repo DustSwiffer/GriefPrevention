@@ -130,7 +130,7 @@ public class EconomyHandler implements Listener
             this.economy = economy;
         }
 
-        Economy getEconomy()
+        public Economy getEconomy()
         {
             return this.economy;
         }
